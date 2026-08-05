@@ -1368,20 +1368,6 @@
             tossCountdown.classList.add('hidden');
         }
 
-        // Fallback motions for when API fails
-        const FALLBACK_MOTIONS = [
-            "This House would ban private ownership of firearms",
-            "This House believes that social media companies should be held liable for user-generated content",
-            "This House would implement a universal basic income",
-            "This House would abolish the death penalty worldwide",
-            "This House believes that voting should be mandatory in democratic elections",
-            "This House would replace fossil fuels with nuclear energy",
-            "This House would implement a four-day work week",
-            "This House believes that artificial intelligence should have legal personhood",
-            "This House would ban single-use plastics globally",
-            "This House believes that healthcare should be free at the point of use"
-        ];
-
         async function generateMotion() {
             try {
                 // Stop countdown if running
@@ -1436,56 +1422,6 @@
                 motionLoading.classList.add('hidden');
                 generateMotionBtn.disabled = false;
                 generateMotionBtn.textContent = 'Generate Motion';
-            }
-        }
-
-            } catch (error) {
-                console.error('Error generating motion:', error);
-                console.log('Using fallback motion instead');
-                
-                // Stop countdown
-                stopMotionCountdown();
-                
-                // Use fallback motion
-                const fallbackMotion = FALLBACK_MOTIONS[Math.floor(Math.random() * FALLBACK_MOTIONS.length)];
-                
-                // Update state
-                appState.motion = fallbackMotion;
-                localStorage.setItem('debateP2P_motion', fallbackMotion);
-
-                // Update UI
-                motionText.textContent = fallbackMotion;
-                motionDisplay.classList.remove('hidden');
-                motionStatus.textContent = 'Fallback (API Error)';
-                motionStatus.className = 'font-jetbrains-mono text-xs text-yellow-400';
-
-                // Lock motion generation - can't be changed
-                generateMotionBtn.disabled = true;
-                generateMotionBtn.textContent = 'Motion Locked';
-                generateMotionBtn.classList.add('opacity-50');
-                apiKeySection.classList.add('hidden');
-
-                // Unlock toss card
-                tossCard.classList.remove('opacity-50');
-                tossStatus.textContent = 'Ready';
-                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
-
-                // Simulate sync with peer
-                simulateMotionSync(fallbackMotion);
-
-                // Start auto-toss countdown (only for host)
-                if (appState.isHost) {
-                    startTossCountdown();
-                }
-
-                console.log('Fallback motion used and locked:', fallbackMotion);
-                
-                // Show warning but don't block the flow
-                showError('API error - using fallback motion');
-            } finally {
-                generateMotionBtn.disabled = false;
-                generateMotionBtn.textContent = 'Generate AI Motion';
-                motionLoading.classList.add('hidden');
             }
         }
 
