@@ -1665,6 +1665,7 @@
         let speechRecognition = null;
         let isSpeechRecognitionActive = false;
         let transcriptStartTime = null;
+        let currentInterimEntry = null;
 
         // Initialize Arena
         function initializeArena() {
@@ -1809,15 +1810,30 @@
             
             speechRecognition.onresult = (event) => {
                 let finalTranscript = '';
+                let interimTranscript = '';
+                
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
                         finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
                     }
                 }
                 
+                // Update interim results in real-time
+                if (interimTranscript) {
+                    updateInterimTranscript(interimTranscript);
+                }
+                
+                // Add final transcript when complete
                 if (finalTranscript) {
                     addTranscriptEntry(finalTranscript, true);
+                    // Clear interim entry after final is added
+                    if (currentInterimEntry) {
+                        currentInterimEntry.remove();
+                        currentInterimEntry = null;
+                    }
                 }
             };
             
@@ -1860,6 +1876,12 @@
             }
             
             try {
+                // Clear any existing interim entry
+                if (currentInterimEntry) {
+                    currentInterimEntry.remove();
+                    currentInterimEntry = null;
+                }
+                
                 speechRecognition.start();
                 console.log('Starting speech recognition');
             } catch (error) {
@@ -1873,6 +1895,12 @@
                 speechRecognition.stop();
                 console.log('Stopping speech recognition');
                 updateTranscriptIndicator(false);
+                
+                // Clear interim entry if exists
+                if (currentInterimEntry) {
+                    currentInterimEntry.remove();
+                    currentInterimEntry = null;
+                }
             }
         }
         
@@ -1893,6 +1921,47 @@
                 statusText.classList.remove('text-red-400');
                 statusText.classList.add('text-gray-400');
             }
+        }
+        
+        function updateInterimTranscript(text) {
+            const transcriptLog = document.getElementById('transcriptLog');
+            
+            // Remove placeholder if exists
+            const placeholder = transcriptLog.querySelector('.text-center.text-outline.italic');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Create or update interim entry
+            if (!currentInterimEntry) {
+                const elapsedTime = transcriptStartTime ? Math.floor((Date.now() - transcriptStartTime) / 1000) : 0;
+                const minutes = Math.floor(elapsedTime / 60);
+                const seconds = elapsedTime % 60;
+                const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const sideTag = appState.side || 'Unknown';
+                const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+                
+                currentInterimEntry = document.createElement('div');
+                currentInterimEntry.className = 'flex items-start space-x-2 p-2 rounded-lg bg-surface-container-high border border-primary/30 animate-pulse';
+                currentInterimEntry.innerHTML = `
+                    <span class="font-jetbrains-mono text-xs text-outline whitespace-nowrap mt-1">[${timestamp}]</span>
+                    <div class="flex-1">
+                        <span class="font-jetbrains-mono text-xs ${sideColor} font-semibold">${sideTag}:</span>
+                        <p class="font-inter text-sm text-primary mt-1 italic">${text}</p>
+                    </div>
+                `;
+                
+                transcriptLog.appendChild(currentInterimEntry);
+            } else {
+                // Update existing interim entry
+                const textElement = currentInterimEntry.querySelector('.text-primary');
+                if (textElement) {
+                    textElement.textContent = text;
+                }
+            }
+            
+            transcriptLog.scrollTop = transcriptLog.scrollHeight;
         }
         
         function addTranscriptEntry(text, isFinal = false) {
