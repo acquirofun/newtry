@@ -569,8 +569,8 @@
                                 Live Transcript
                             </h3>
                             <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-                                <span class="font-jetbrains-mono text-xs text-red-400">Recording</span>
+                                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                                <span class="font-jetbrains-mono text-xs text-gray-400">Paused</span>
                             </div>
                         </div>
                         <div id="transcriptLog" class="bg-surface-container rounded-xl p-4 h-48 overflow-y-auto font-inter text-sm space-y-2">
@@ -1660,6 +1660,11 @@
         let isMicMuted = false;
         let isVideoOff = false;
         let isSoundOff = false;
+        
+        // Speech Recognition State
+        let speechRecognition = null;
+        let isSpeechRecognitionActive = false;
+        let transcriptStartTime = null;
 
         // Initialize Arena
         function initializeArena() {
@@ -1684,6 +1689,9 @@
             
             // Start camera automatically
             startLocalVideo();
+            
+            // Start speech recognition automatically
+            startSpeechRecognition();
             
             console.log('Arena initialized');
         }
@@ -1773,8 +1781,158 @@
         toggleSoundBtn.addEventListener('click', toggleSound);
         leaveRoomBtn.addEventListener('click', () => {
             stopLocalVideo();
+            stopSpeechRecognition();
             resetToLanding();
         });
+
+        // Web Speech API Functions
+        function initializeSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                console.error('Web Speech API not supported in this browser');
+                showError('Speech recognition not supported in this browser');
+                return false;
+            }
+            
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.continuous = true;
+            speechRecognition.interimResults = true;
+            speechRecognition.lang = 'en-US';
+            
+            speechRecognition.onstart = () => {
+                isSpeechRecognitionActive = true;
+                transcriptStartTime = transcriptStartTime || Date.now();
+                console.log('Speech recognition started');
+                updateTranscriptIndicator(true);
+            };
+            
+            speechRecognition.onresult = (event) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    }
+                }
+                
+                if (finalTranscript) {
+                    addTranscriptEntry(finalTranscript, true);
+                }
+            };
+            
+            speechRecognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    showError('Microphone access denied. Please allow microphone permissions.');
+                }
+                
+                if (isSpeechRecognitionActive && event.error !== 'not-allowed') {
+                    setTimeout(() => {
+                        if (isSpeechRecognitionActive) {
+                            speechRecognition.start();
+                        }
+                    }, 1000);
+                }
+            };
+            
+            speechRecognition.onend = () => {
+                console.log('Speech recognition ended');
+                if (isSpeechRecognitionActive) {
+                    setTimeout(() => {
+                        if (isSpeechRecognitionActive) {
+                            speechRecognition.start();
+                        }
+                    }, 100);
+                } else {
+                    updateTranscriptIndicator(false);
+                }
+            };
+            
+            return true;
+        }
+        
+        function startSpeechRecognition() {
+            if (!speechRecognition) {
+                if (!initializeSpeechRecognition()) {
+                    return;
+                }
+            }
+            
+            try {
+                speechRecognition.start();
+                console.log('Starting speech recognition');
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+            }
+        }
+        
+        function stopSpeechRecognition() {
+            if (speechRecognition) {
+                isSpeechRecognitionActive = false;
+                speechRecognition.stop();
+                console.log('Stopping speech recognition');
+                updateTranscriptIndicator(false);
+            }
+        }
+        
+        function updateTranscriptIndicator(isActive) {
+            const indicator = document.querySelector('#transcriptLog').previousElementSibling.querySelector('.w-2');
+            const statusText = document.querySelector('#transcriptLog').previousElementSibling.querySelector('.font-jetbrains-mono');
+            
+            if (isActive) {
+                indicator.classList.remove('bg-gray-400');
+                indicator.classList.add('bg-red-400', 'animate-pulse');
+                statusText.textContent = 'Recording';
+                statusText.classList.remove('text-gray-400');
+                statusText.classList.add('text-red-400');
+            } else {
+                indicator.classList.remove('bg-red-400', 'animate-pulse');
+                indicator.classList.add('bg-gray-400');
+                statusText.textContent = 'Paused';
+                statusText.classList.remove('text-red-400');
+                statusText.classList.add('text-gray-400');
+            }
+        }
+        
+        function addTranscriptEntry(text, isFinal = false) {
+            const elapsedTime = transcriptStartTime ? Math.floor((Date.now() - transcriptStartTime) / 1000) : 0;
+            const minutes = Math.floor(elapsedTime / 60);
+            const seconds = elapsedTime % 60;
+            const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            const sideTag = appState.side || 'Unknown';
+            const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+            
+            const transcriptEntry = document.createElement('div');
+            transcriptEntry.className = 'flex items-start space-x-2 p-2 rounded-lg bg-surface-container-high border border-outline/30';
+            transcriptEntry.innerHTML = `
+                <span class="font-jetbrains-mono text-xs text-outline whitespace-nowrap mt-1">[${timestamp}]</span>
+                <div class="flex-1">
+                    <span class="font-jetbrains-mono text-xs ${sideColor} font-semibold">${sideTag}:</span>
+                    <p class="font-inter text-sm text-on-surface mt-1">${text}</p>
+                </div>
+            `;
+            
+            const transcriptLog = document.getElementById('transcriptLog');
+            
+            const placeholder = transcriptLog.querySelector('.text-center.text-outline.italic');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            transcriptLog.appendChild(transcriptEntry);
+            transcriptLog.scrollTop = transcriptLog.scrollHeight;
+            
+            appState.transcript.push({
+                timestamp: timestamp,
+                side: sideTag,
+                text: text,
+                isFinal: isFinal
+            });
+            
+            console.log('Transcript entry added:', { timestamp, side: sideTag, text });
+        }
 
         function updateTimerDisplay(seconds) {
             const minutes = Math.floor(seconds / 60);
