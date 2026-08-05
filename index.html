@@ -1817,7 +1817,7 @@ Return ONLY the motion text, nothing else.`;
                     isMicMuted = !isMicMuted;
                     audioTrack.enabled = !isMicMuted;
                     localAudioStatus.textContent = isMicMuted ? '🔇' : '🟢';
-                    micIcon.textContent = isMicMuted ? '🎤' : '🔇';
+                    micIcon.textContent = isMicMuted ? '🔇' : '🎤';
                     console.log('Mic toggled:', isMicMuted);
                 }
             }
@@ -1830,7 +1830,7 @@ Return ONLY the motion text, nothing else.`;
                     isVideoOff = !isVideoOff;
                     videoTrack.enabled = !isVideoOff;
                     localVideoStatus.textContent = isVideoOff ? '🔴' : '🟢';
-                    videoIcon.textContent = isVideoOff ? '📷' : '🔴';
+                    videoIcon.textContent = isVideoOff ? '�' : '�';
                     if (isVideoOff) {
                         localVideoPlaceholder.classList.remove('hidden');
                     } else {
@@ -1845,7 +1845,7 @@ Return ONLY the motion text, nothing else.`;
             isSoundOff = !isSoundOff;
             localVideo.muted = isSoundOff;
             remoteVideo.muted = isSoundOff;
-            soundIcon.textContent = isSoundOff ? '🔊' : '🔇';
+            soundIcon.textContent = isSoundOff ? '�' : '�';
             console.log('Sound toggled:', isSoundOff);
         }
 
