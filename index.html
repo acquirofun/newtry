@@ -816,6 +816,8 @@
 
         // View Management Functions
         function showView(viewName) {
+            console.log('showView called with:', viewName);
+            
             // Stop sync polling and timers when leaving lobby
             if (appState.currentView === 'lobby' && viewName !== 'lobby') {
                 stopMotionSyncPolling();
@@ -851,6 +853,7 @@
                     break;
             }
             appState.currentView = viewName;
+            console.log('Current view set to:', appState.currentView);
         }
 
         // Separate function for showing lobby that doesn't stop polling
@@ -1718,12 +1721,15 @@ Return ONLY the motion text, nothing else.`;
 
         function enterDebateArena() {
             try {
+                console.log('enterDebateArena called');
                 stopPreparationTimer();
                 stopHurryUpCountdown();
                 
                 // Transition to debate arena
                 appState.debatePhase = 'debate';
+                console.log('About to show arena view');
                 showView('arena');
+                console.log('Arena view should now be visible');
                 
                 // Initialize arena
                 initializeArena();
