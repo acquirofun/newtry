@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DebateP2P - Real-Time P2P Video Debate Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: '#0b1326',
+                        'surface-dim': '#0b1326',
+                        'surface-bright': '#31394d',
+                        'surface-container': '#171f33',
+                        'surface-container-high': '#222a3d',
+                        primary: '#b4c5ff',
+                        'primary-dark': '#2563eb',
+                        secondary: '#4edea3',
+                        'secondary-dark': '#00a572',
+                        tertiary: '#c0c1ff',
+                        'tertiary-dark': '#585be6',
+                        'on-surface': '#dae2fd',
+                        'on-surface-variant': '#c3c6d7',
+                        outline: '#8d90a0',
+                    },
+                    fontFamily: {
+                        'dm-sans': ['DM Sans', 'sans-serif'],
+                        'inter': ['Inter', 'sans-serif'],
+                        'jetbrains-mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    backdropBlur: {
+                        'glass': '12px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b1326;
+            color: #dae2fd;
+        }
+        .glass {
+            background: rgba(23, 31, 51, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(141, 144, 160, 0.3);
+        }
+        .glass-strong {
+            background: rgba(23, 31, 51, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(141, 144, 160, 0.4);
+        }
+        .glow-primary {
+            box-shadow: 0 0 20px rgba(180, 197, 255, 0.3);
+        }
+        .glow-secondary {
+            box-shadow: 0 0 20px rgba(78, 222, 163, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-inter antialiased">
+    <!-- Fixed Top Navigation Header -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-strong">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- App Title -->
+                <div class="flex items-center">
+                    <h1 class="font-dm-sans text-2xl font-bold text-primary tracking-tight">
+                        DebateP2P
+                    </h1>
+                </div>
+                
+                <!-- Room Code Display -->
+                <div id="roomCodeDisplay" class="hidden flex items-center space-x-2">
+                    <div class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-surface-container-high border border-primary/30">
+                        <span class="font-jetbrains-mono text-xs text-primary font-medium tracking-wide">
+                            Room:
+                        </span>
+                        <span id="roomCodeValue" class="font-jetbrains-mono text-sm text-secondary font-bold tracking-wider">
+                            123456
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Connection Status Indicator -->
+                <div class="flex items-center space-x-2">
+                    <div id="connectionStatus" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-surface-container-high border border-outline/30">
+                        <span id="statusDot" class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                        <span id="statusText" class="font-jetbrains-mono text-xs text-secondary font-medium tracking-wide">
+                            Server Online 🟢
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="pt-20 px-4 sm:px-6 lg:px-8 min-h-screen flex items-center justify-center">
+        <div class="max-w-7xl mx-auto w-full">
+            <!-- Landing View -->
+            <div id="landingView" class="flex items-center justify-center min-h-[calc(100vh-5rem)]">
+                <div class="glass-strong rounded-2xl p-8 sm:p-12 max-w-md w-full border border-outline/30 glow-primary">
+                    <!-- Logo/Tagline Section -->
+                    <div class="text-center mb-8">
+                        <h2 class="font-dm-sans text-3xl sm:text-4xl font-bold text-primary mb-3 tracking-tight">
+                            CONNECT. DEBATE. EVALUATE.
+                        </h2>
+                        <p class="font-inter text-on-surface-variant text-base">
+                            Real-time P2P video debates with AI-powered judging
+                        </p>
+                    </div>
+
+                    <!-- Input Fields -->
+                    <div class="space-y-5 mb-8">
+                        <!-- Name Input -->
+                        <div>
+                            <label for="nameInput" class="block font-jetbrains-mono text-xs text-primary mb-2 tracking-wide">
+                                ENTER YOUR NAME
+                            </label>
+                            <input 
+                                type="text" 
+                                id="nameInput" 
+                                placeholder="Your display name"
+                                class="w-full px-4 py-3 rounded-lg bg-surface-container border border-outline/50 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-inter"
+                            >
+                        </div>
+
+                        <!-- Room Code Input -->
+                        <div>
+                            <label for="roomInput" class="block font-jetbrains-mono text-xs text-primary mb-2 tracking-wide">
+                                ENTER ROOM CODE
+                            </label>
+                            <input 
+                                type="text" 
+                                id="roomInput" 
+                                placeholder="123456"
+                                maxlength="6"
+                                class="w-full px-4 py-3 rounded-lg bg-surface-container border border-outline/50 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-inter font-jetbrains-mono"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-3">
+                        <button 
+                            id="createRoomBtn"
+                            class="w-full py-3 px-6 rounded-lg bg-primary-dark text-white font-dm-sans font-semibold tracking-wide hover:bg-primary transition-all duration-200 border border-primary/30 hover:glow-primary"
+                        >
+                            Create New Room
+                        </button>
+                        <button 
+                            id="joinRoomBtn"
+                            class="w-full py-3 px-6 rounded-lg bg-transparent text-primary font-dm-sans font-semibold tracking-wide border border-primary/50 hover:bg-primary/10 transition-all duration-200"
+                        >
+                            Join Room
+                        </button>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="mt-4 text-center text-red-400 text-sm font-inter hidden">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waiting Room View -->
+            <div id="waitingView" class="hidden flex items-center justify-center min-h-[calc(100vh-5rem)]">
+                <div class="glass-strong rounded-2xl p-8 sm:p-12 max-w-md w-full border border-outline/30 glow-secondary">
+                    <div class="text-center">
+                        <!-- Room Code Display -->
+                        <div class="mb-8">
+                            <label class="block font-jetbrains-mono text-xs text-primary mb-2 tracking-wide">
+                                YOUR ROOM CODE
+                            </label>
+                            <div id="waitingRoomCode" class="font-jetbrains-mono text-4xl font-bold text-secondary mb-2 tracking-wider">
+                                123456
+                            </div>
+                            <p class="font-inter text-on-surface-variant text-sm">
+                                Share this code with your opponent
+                            </p>
+                        </div>
+
+                        <!-- Waiting Status -->
+                        <div class="mb-8">
+                            <div class="flex items-center justify-center space-x-3 mb-4">
+                                <div class="w-3 h-3 rounded-full bg-secondary animate-pulse"></div>
+                                <span class="font-dm-sans text-xl font-semibold text-on-surface">
+                                    Waiting for opponent to join... ⏳
+                                </span>
+                            </div>
+                            <p class="font-inter text-on-surface-variant text-sm">
+                                Stay on this page while your opponent enters the room code
+                            </p>
+                        </div>
+
+                        <!-- Cancel Button -->
+                        <button 
+                            id="cancelWaitingBtn"
+                            class="w-full py-3 px-6 rounded-lg bg-transparent text-red-400 font-dm-sans font-semibold tracking-wide border border-red-400/50 hover:bg-red-400/10 transition-all duration-200"
+                        >
+                            Cancel & Return to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pre-Debate Lobby View -->
+            <div id="lobbyView" class="hidden flex items-center justify-center min-h-[calc(100vh-5rem)]">
+                <div class="max-w-4xl w-full">
+                    <!-- Lobby Header -->
+                    <div class="text-center mb-8">
+                        <h2 class="font-dm-sans text-3xl sm:text-4xl font-bold text-primary mb-3 tracking-tight">
+                            Pre-Debate Lobby
+                        </h2>
+                        <div class="flex items-center justify-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                            <span class="font-jetbrains-mono text-sm text-secondary font-medium tracking-wide">
+                                Both Participants Connected 🟢
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Lobby Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Motion Card -->
+                        <div id="motionCard" class="glass rounded-xl p-6 border border-outline/30 hover:border-primary/50 transition-all duration-300">
+                            <div class="text-center">
+                                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span class="text-2xl">📋</span>
+                                </div>
+                                <h3 class="font-dm-sans text-lg font-semibold text-primary mb-2">
+                                    Motion
+                                </h3>
+                                
+                                <!-- API Key Input -->
+                                <div id="apiKeySection" class="mb-3">
+                                    <input 
+                                        type="password" 
+                                        id="apiKeyInput" 
+                                        placeholder="Enter Gemini API Key"
+                                        class="w-full px-3 py-2 rounded-lg bg-surface-container border border-outline/50 text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-inter text-xs"
+                                    >
+                                </div>
+                                
+                                <!-- Auto-Generate Countdown -->
+                                <div id="motionCountdown" class="hidden mb-3 p-4 rounded-lg bg-surface-container-high border border-primary/30">
+                                    <p class="font-jetbrains-mono text-xs text-primary mb-1">Motion arriving in:</p>
+                                    <p id="motionCountdownValue" class="font-jetbrains-mono text-4xl font-bold text-primary animate-pulse">10</p>
+                                    <p class="font-jetbrains-mono text-xs text-tertiary mt-2">⏳ Preparing debate topic...</p>
+                                </div>
+                                
+                                <!-- Generate Button -->
+                                <button 
+                                    id="generateMotionBtn"
+                                    class="w-full py-2 px-4 rounded-lg bg-primary-dark text-white font-dm-sans text-sm font-semibold tracking-wide hover:bg-primary transition-all duration-200 border border-primary/30 mb-3"
+                                >
+                                    Generate AI Motion
+                                </button>
+                                
+                                <!-- Skip Auto-Generate Button -->
+                                <button 
+                                    id="skipAutoGenerateBtn"
+                                    class="hidden w-full py-2 px-4 rounded-lg bg-transparent text-primary font-dm-sans text-sm font-semibold tracking-wide border border-primary/50 hover:bg-primary/10 transition-all duration-200 mb-3"
+                                >
+                                    Skip & Generate Manually
+                                </button>
+                                
+                                <!-- Motion Display -->
+                                <div id="motionDisplay" class="hidden mb-3 p-3 rounded-lg bg-surface-container-high border border-primary/30 min-h-[80px]">
+                                    <p id="motionText" class="font-inter text-sm text-on-surface leading-relaxed">
+                                    </p>
+                                    <p class="font-jetbrains-mono text-xs text-secondary mt-2">🔒 Locked for this room</p>
+                                </div>
+                                
+                                <!-- Loading State -->
+                                <div id="motionLoading" class="hidden mb-3">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        <div class="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                                        <span class="font-jetbrains-mono text-xs text-primary">Generating...</span>
+                                    </div>
+                                </div>
+                                
+                                <div id="motionStatus" class="font-jetbrains-mono text-xs text-outline">
+                                    Ready
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toss Card -->
+                        <div id="tossCard" class="glass rounded-xl p-6 border border-outline/30 hover:border-primary/50 transition-all duration-300 opacity-50">
+                            <div class="text-center">
+                                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-tertiary/20 flex items-center justify-center">
+                                    <span id="tossIcon" class="text-2xl">🪙</span>
+                                </div>
+                                <h3 class="font-dm-sans text-lg font-semibold text-tertiary mb-2">
+                                    Digital Toss
+                                </h3>
+                                <p class="font-inter text-on-surface-variant text-sm mb-4">
+                                    Assign PRO/CON sides
+                                </p>
+                                
+                                <!-- Auto-Toss Countdown -->
+                                <div id="tossCountdown" class="hidden mb-3 p-3 rounded-lg bg-surface-container-high border border-tertiary/30">
+                                    <p class="font-jetbrains-mono text-xs text-tertiary mb-1">Auto-toss in:</p>
+                                    <p id="tossCountdownValue" class="font-jetbrains-mono text-3xl font-bold text-tertiary">5</p>
+                                </div>
+                                
+                                <!-- Toss Result Display -->
+                                <div id="tossResult" class="hidden mb-3 p-3 rounded-lg bg-surface-container-high border border-tertiary/30 min-h-[60px]">
+                                    <p id="tossResultText" class="font-inter text-sm text-on-surface leading-relaxed font-semibold">
+                                    </p>
+                                    <p id="tossSideText" class="font-jetbrains-mono text-xs text-tertiary mt-1">
+                                    </p>
+                                </div>
+                                
+                                <!-- Coin Animation -->
+                                <div id="coinAnimation" class="hidden mb-3">
+                                    <div id="coinSpinner" class="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-tertiary to-primary flex items-center justify-center animate-spin">
+                                        <span class="text-2xl">🪙</span>
+                                    </div>
+                                    <p class="font-jetbrains-mono text-xs text-tertiary mt-2">Flipping...</p>
+                                </div>
+                                
+                                <div id="tossStatus" class="font-jetbrains-mono text-xs text-outline">
+                                    Locked
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preparation Card -->
+                        <div id="prepCard" class="glass rounded-xl p-6 border border-outline/30 hover:border-primary/50 transition-all duration-300 opacity-50">
+                            <div class="text-center">
+                                <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-secondary/20 flex items-center justify-center">
+                                    <span class="text-2xl">⏱️</span>
+                                </div>
+                                <h3 class="font-dm-sans text-lg font-semibold text-secondary mb-2">
+                                    Preparation
+                                </h3>
+                                <p class="font-inter text-on-surface-variant text-sm mb-4">
+                                    5-minute countdown
+                                </p>
+                                
+                                <!-- Timer Display -->
+                                <div id="timerDisplay" class="hidden mb-4 p-4 rounded-lg bg-surface-container-high border border-secondary/30">
+                                    <p id="timerValue" class="font-jetbrains-mono text-4xl font-bold text-secondary tracking-wider">
+                                        04:59
+                                    </p>
+                                    <p id="timerLabel" class="font-jetbrains-mono text-xs text-secondary mt-1">
+                                        Time Remaining
+                                    </p>
+                                </div>
+                                
+                                <!-- Enter Debate Button -->
+                                <button 
+                                    id="enterDebateBtn"
+                                    class="hidden w-full py-3 px-6 rounded-lg bg-secondary-dark text-white font-dm-sans font-semibold tracking-wide hover:bg-secondary transition-all duration-200 border border-secondary/30 mb-3"
+                                >
+                                    Ready to Enter Live Debate Arena
+                                </button>
+                                
+                                <!-- Hurry Up Countdown -->
+                                <div id="hurryUpCountdown" class="hidden mb-3 p-3 rounded-lg bg-surface-container-high border border-red-400/50">
+                                    <p class="font-jetbrains-mono text-xs text-red-400 mb-1">Hurry up! Arena in:</p>
+                                    <p id="hurryUpValue" class="font-jetbrains-mono text-3xl font-bold text-red-400 animate-pulse">10</p>
+                                </div>
+                                
+                                <div id="prepStatus" class="font-jetbrains-mono text-xs text-outline">
+                                    Locked
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Participant Info -->
+                    <div class="mt-8 glass rounded-xl p-6 border border-outline/30">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-center">
+                                <p class="font-jetbrains-mono text-xs text-primary mb-1">YOU</p>
+                                <p id="lobbyUserName" class="font-dm-sans text-lg font-semibold text-on-surface">
+                                    Your Name
+                                </p>
+                                <p id="lobbyUserRole" class="font-inter text-sm text-on-surface-variant">
+                                    Host
+                                </p>
+                                <p id="lobbyUserSide" class="font-jetbrains-mono text-sm text-tertiary mt-1 font-bold">
+                                    ---
+                                </p>
+                            </div>
+                            <div class="flex-1 mx-8 border-t border-outline/30"></div>
+                            <div class="text-center">
+                                <p class="font-jetbrains-mono text-xs text-primary mb-1">OPPONENT</p>
+                                <p id="lobbyOpponentName" class="font-dm-sans text-lg font-semibold text-on-surface">
+                                    Connected
+                                </p>
+                                <p class="font-inter text-sm text-secondary">
+                                    Ready
+                                </p>
+                                <p id="lobbyOpponentSide" class="font-jetbrains-mono text-sm text-outline mt-1">
+                                    ---
+                                </p>
+                            </div>
+                        </div>
+                        <div class="border-t border-outline/30 pt-4 text-center">
+                            <p class="font-jetbrains-mono text-xs text-primary mb-1">ROOM CODE</p>
+                            <p id="lobbyRoomCode" class="font-jetbrains-mono text-2xl font-bold text-secondary tracking-wider">
+                                123456
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debate Arena View -->
+            <div id="arenaView" class="hidden flex flex-col min-h-screen">
+                <!-- Motion Banner -->
+                <div class="sticky top-16 z-40 glass-strong border-b border-outline/30">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">📋</span>
+                                <div>
+                                    <p class="font-jetbrains-mono text-xs text-primary mb-1">CURRENT MOTION</p>
+                                    <p id="arenaMotion" class="font-dm-sans text-lg font-semibold text-on-surface">
+                                        Debate motion will appear here
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span id="debateTimer" class="font-jetbrains-mono text-2xl font-bold text-secondary">00:00</span>
+                                <span class="font-jetbrains-mono text-xs text-secondary">TIME</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Arena -->
+                <div class="flex-1 p-4 sm:p-6 lg:p-8">
+                    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                        <!-- Local Feed -->
+                        <div class="glass rounded-2xl p-4 border border-outline/30 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-3 h-3 rounded-full bg-secondary animate-pulse"></span>
+                                    <h3 class="font-dm-sans text-lg font-semibold text-primary">
+                                        LOCAL FEED
+                                    </h3>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span id="localAudioStatus" class="text-xs">🔇</span>
+                                    <span id="localVideoStatus" class="text-xs">🔴</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Video Container -->
+                            <div class="flex-1 bg-surface-container rounded-xl overflow-hidden relative min-h-[300px] mb-4">
+                                <video id="localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                                <div id="localVideoPlaceholder" class="absolute inset-0 flex items-center justify-center bg-surface-container">
+                                    <div class="text-center">
+                                        <span class="text-4xl mb-2">📹</span>
+                                        <p class="font-jetbrains-mono text-sm text-outline">Camera Off</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- User Info -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p id="localUserName" class="font-dm-sans text-lg font-semibold text-on-surface">
+                                        Your Name
+                                    </p>
+                                    <p id="localUserSide" class="font-jetbrains-mono text-sm text-tertiary">
+                                        ---
+                                    </p>
+                                </div>
+                                <p class="font-jetbrains-mono text-xs text-primary">YOU</p>
+                            </div>
+                            
+                            <!-- Control Buttons -->
+                            <div class="grid grid-cols-4 gap-2 mt-4">
+                                <button id="toggleMicBtn" class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/50 hover:border-primary/50 transition-all duration-200">
+                                    <span id="micIcon" class="text-xl mb-1">🎤</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Mute</span>
+                                </button>
+                                <button id="toggleVideoBtn" class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/50 hover:border-primary/50 transition-all duration-200">
+                                    <span id="videoIcon" class="text-xl mb-1">📷</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Video</span>
+                                </button>
+                                <button id="toggleSoundBtn" class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/50 hover:border-primary/50 transition-all duration-200">
+                                    <span id="soundIcon" class="text-xl mb-1">🔊</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Sound</span>
+                                </button>
+                                <button id="leaveRoomBtn" class="flex flex-col items-center justify-center p-3 rounded-lg bg-red-400/20 border border-red-400/50 hover:bg-red-400/30 transition-all duration-200">
+                                    <span class="text-xl mb-1">🚪</span>
+                                    <span class="font-jetbrains-mono text-xs text-red-400">Leave</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Remote Feed -->
+                        <div class="glass rounded-2xl p-4 border border-outline/30 flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-3 h-3 rounded-full bg-yellow-400 animate-pulse"></span>
+                                    <h3 class="font-dm-sans text-lg font-semibold text-tertiary">
+                                        REMOTE FEED
+                                    </h3>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span id="remoteAudioStatus" class="text-xs">🔇</span>
+                                    <span id="remoteVideoStatus" class="text-xs">🔴</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Video Container -->
+                            <div class="flex-1 bg-surface-container rounded-xl overflow-hidden relative min-h-[300px] mb-4">
+                                <video id="remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                                <div id="remoteVideoPlaceholder" class="absolute inset-0 flex items-center justify-center bg-surface-container">
+                                    <div class="text-center">
+                                        <span class="text-4xl mb-2">👥</span>
+                                        <p class="font-jetbrains-mono text-sm text-outline">Waiting for opponent...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Opponent Info -->
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p id="remoteUserName" class="font-dm-sans text-lg font-semibold text-on-surface">
+                                        Opponent
+                                    </p>
+                                    <p id="remoteUserSide" class="font-jetbrains-mono text-sm text-outline">
+                                        ---
+                                    </p>
+                                </div>
+                                <p class="font-jetbrains-mono text-xs text-tertiary">OPPONENT</p>
+                            </div>
+                            
+                            <!-- Opponent Controls (Read-only) -->
+                            <div class="grid grid-cols-4 gap-2 mt-4 opacity-50">
+                                <div class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/30">
+                                    <span class="text-xl mb-1">🎤</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Mic</span>
+                                </div>
+                                <div class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/30">
+                                    <span class="text-xl mb-1">📷</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Video</span>
+                                </div>
+                                <div class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/30">
+                                    <span class="text-xl mb-1">🔊</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Sound</span>
+                                </div>
+                                <div class="flex flex-col items-center justify-center p-3 rounded-lg bg-surface-container border border-outline/30">
+                                    <span class="text-xl mb-1">⏱️</span>
+                                    <span class="font-jetbrains-mono text-xs text-outline">Timer</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transcript Section -->
+                <div class="glass-strong border-t border-outline/30 p-4 sm:p-6">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-dm-sans text-lg font-semibold text-primary">
+                                Live Transcript
+                            </h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
+                                <span class="font-jetbrains-mono text-xs text-red-400">Recording</span>
+                            </div>
+                        </div>
+                        <div id="transcriptLog" class="bg-surface-container rounded-xl p-4 h-48 overflow-y-auto font-inter text-sm space-y-2">
+                            <p class="text-center text-outline italic">Transcript will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Application state will be managed here
+        const appState = {
+            currentView: 'landing',
+            roomCode: null,
+            userName: null,
+            isHost: false,
+            opponentConnected: false,
+            motion: null,
+            side: null, // 'PRO' or 'CON'
+            debatePhase: 'landing', // landing, waiting, lobby, preparation, debate, judging
+            transcript: [],
+            turnTimer: null,
+            preparationTimer: null
+        };
+
+        // Simulation interval for opponent joining
+        let waitingInterval = null;
+        
+        // Auto-generate motion countdown
+        let motionCountdownInterval = null;
+        
+        // Auto-toss countdown
+        let tossCountdownInterval = null;
+        
+        // Hurry up countdown
+        let hurryUpCountdownInterval = null;
+
+        // DOM Elements
+        const landingView = document.getElementById('landingView');
+        const waitingView = document.getElementById('waitingView');
+        const lobbyView = document.getElementById('lobbyView');
+        const arenaView = document.getElementById('arenaView');
+        const nameInput = document.getElementById('nameInput');
+        const roomInput = document.getElementById('roomInput');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const waitingRoomCode = document.getElementById('waitingRoomCode');
+        const cancelWaitingBtn = document.getElementById('cancelWaitingBtn');
+        const lobbyUserName = document.getElementById('lobbyUserName');
+        const lobbyUserRole = document.getElementById('lobbyUserRole');
+        const motionCard = document.getElementById('motionCard');
+        const tossCard = document.getElementById('tossCard');
+        const prepCard = document.getElementById('prepCard');
+        const motionStatus = document.getElementById('motionStatus');
+        const tossStatus = document.getElementById('tossStatus');
+        const prepStatus = document.getElementById('prepStatus');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeySection = document.getElementById('apiKeySection');
+        const generateMotionBtn = document.getElementById('generateMotionBtn');
+        const motionDisplay = document.getElementById('motionDisplay');
+        const motionText = document.getElementById('motionText');
+        const motionLoading = document.getElementById('motionLoading');
+        const motionCountdown = document.getElementById('motionCountdown');
+        const motionCountdownValue = document.getElementById('motionCountdownValue');
+        const skipAutoGenerateBtn = document.getElementById('skipAutoGenerateBtn');
+        const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+        const roomCodeValue = document.getElementById('roomCodeValue');
+        const lobbyRoomCode = document.getElementById('lobbyRoomCode');
+        const lobbyUserSide = document.getElementById('lobbyUserSide');
+        const lobbyOpponentSide = document.getElementById('lobbyOpponentSide');
+        const tossIcon = document.getElementById('tossIcon');
+        const tossCountdown = document.getElementById('tossCountdown');
+        const tossCountdownValue = document.getElementById('tossCountdownValue');
+        const tossResult = document.getElementById('tossResult');
+        const tossResultText = document.getElementById('tossResultText');
+        const tossSideText = document.getElementById('tossSideText');
+        const coinAnimation = document.getElementById('coinAnimation');
+        const coinSpinner = document.getElementById('coinSpinner');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timerValue = document.getElementById('timerValue');
+        const timerLabel = document.getElementById('timerLabel');
+        const enterDebateBtn = document.getElementById('enterDebateBtn');
+        const hurryUpCountdown = document.getElementById('hurryUpCountdown');
+        const hurryUpValue = document.getElementById('hurryUpValue');
+        
+        // Arena View Elements
+        const arenaMotion = document.getElementById('arenaMotion');
+        const debateTimer = document.getElementById('debateTimer');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const localVideoPlaceholder = document.getElementById('localVideoPlaceholder');
+        const remoteVideoPlaceholder = document.getElementById('remoteVideoPlaceholder');
+        const localUserName = document.getElementById('localUserName');
+        const localUserSide = document.getElementById('localUserSide');
+        const remoteUserName = document.getElementById('remoteUserName');
+        const remoteUserSide = document.getElementById('remoteUserSide');
+        const localAudioStatus = document.getElementById('localAudioStatus');
+        const localVideoStatus = document.getElementById('localVideoStatus');
+        const remoteAudioStatus = document.getElementById('remoteAudioStatus');
+        const remoteVideoStatus = document.getElementById('remoteVideoStatus');
+        const toggleMicBtn = document.getElementById('toggleMicBtn');
+        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+        const toggleSoundBtn = document.getElementById('toggleSoundBtn');
+        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+        const micIcon = document.getElementById('micIcon');
+        const videoIcon = document.getElementById('videoIcon');
+        const soundIcon = document.getElementById('soundIcon');
+        const transcriptLog = document.getElementById('transcriptLog');
+
+        // Generate random room code
+        function generateRoomCode() {
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += Math.floor(Math.random() * 10);
+            }
+            return code;
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Validate inputs
+        function validateInputs() {
+            const name = nameInput.value.trim();
+            const roomCode = roomInput.value.trim();
+
+            if (!name) {
+                showError('Please enter your name');
+                return null;
+            }
+
+            if (!roomCode) {
+                showError('Please enter a room code');
+                return null;
+            }
+
+            // Validate that room code is 6 digits
+            if (!/^\d{6}$/.test(roomCode)) {
+                showError('Room code must be 6 digits');
+                return null;
+            }
+
+            return { name, roomCode };
+        }
+
+        // Create Room Handler
+        createRoomBtn.addEventListener('click', () => {
+            try {
+                const name = nameInput.value.trim();
+                
+                if (!name) {
+                    showError('Please enter your name');
+                    return;
+                }
+
+                // Generate and set room code
+                const newRoomCode = generateRoomCode();
+                roomInput.value = newRoomCode;
+
+                // Save to appState and localStorage
+                appState.userName = name;
+                appState.roomCode = newRoomCode;
+                appState.isHost = true;
+                appState.debatePhase = 'waiting';
+
+                localStorage.setItem('debateP2P_userName', name);
+                localStorage.setItem('debateP2P_roomCode', newRoomCode);
+                localStorage.setItem('debateP2P_isHost', 'true');
+
+                console.log('Room created:', { name, roomCode: newRoomCode, isHost: true });
+                
+                // Update room code display
+                updateRoomCodeDisplay();
+                
+                // Transition to waiting room
+                showWaitingRoom();
+                simulateOpponentJoin();
+                
+            } catch (error) {
+                console.error('Error creating room:', error);
+                showError('Failed to create room. Please try again.');
+            }
+        });
+
+        // Join Room Handler
+        joinRoomBtn.addEventListener('click', () => {
+            try {
+                const validation = validateInputs();
+                
+                if (!validation) {
+                    return;
+                }
+
+                // Save to appState and localStorage
+                appState.userName = validation.name;
+                appState.roomCode = validation.roomCode;
+                appState.isHost = false;
+                appState.debatePhase = 'lobby';
+                appState.opponentConnected = true;
+
+                localStorage.setItem('debateP2P_userName', validation.name);
+                localStorage.setItem('debateP2P_roomCode', validation.roomCode);
+                localStorage.setItem('debateP2P_isHost', 'false');
+
+                console.log('Joining room:', { name: validation.name, roomCode: validation.roomCode, isHost: false });
+                
+                // Update room code display
+                updateRoomCodeDisplay();
+                
+                // Transition to lobby
+                showLobby();
+                
+            } catch (error) {
+                console.error('Error joining room:', error);
+                showError('Failed to join room. Please try again.');
+            }
+        });
+
+        // Cancel Waiting Handler
+        cancelWaitingBtn.addEventListener('click', () => {
+            if (waitingInterval) {
+                clearInterval(waitingInterval);
+                waitingInterval = null;
+            }
+            resetToLanding();
+        });
+
+        // View Management Functions
+        function showView(viewName) {
+            // Stop sync polling and timers when leaving lobby
+            if (appState.currentView === 'lobby' && viewName !== 'lobby') {
+                stopMotionSyncPolling();
+                stopTossSyncPolling();
+                stopPreparationTimer();
+                stopMotionCountdown();
+                stopTossCountdown();
+                stopHurryUpCountdown();
+            }
+            
+            // Stop video when leaving arena
+            if (appState.currentView === 'arena' && viewName !== 'arena') {
+                stopLocalVideo();
+            }
+            
+            landingView.classList.add('hidden');
+            waitingView.classList.add('hidden');
+            lobbyView.classList.add('hidden');
+            arenaView.classList.add('hidden');
+
+            switch(viewName) {
+                case 'landing':
+                    landingView.classList.remove('hidden');
+                    break;
+                case 'waiting':
+                    waitingView.classList.remove('hidden');
+                    break;
+                case 'lobby':
+                    lobbyView.classList.remove('hidden');
+                    break;
+                case 'arena':
+                    arenaView.classList.remove('hidden');
+                    break;
+            }
+            appState.currentView = viewName;
+        }
+
+        // Separate function for showing lobby that doesn't stop polling
+        function showLobbyView() {
+            landingView.classList.add('hidden');
+            waitingView.classList.add('hidden');
+            lobbyView.classList.remove('hidden');
+            appState.currentView = 'lobby';
+        }
+
+        function updateConnectionStatus(status, message) {
+            statusText.textContent = message;
+            
+            switch(status) {
+                case 'online':
+                    statusDot.className = 'w-2 h-2 rounded-full bg-secondary animate-pulse';
+                    statusText.className = 'font-jetbrains-mono text-xs text-secondary font-medium tracking-wide';
+                    break;
+                case 'connected':
+                    statusDot.className = 'w-2 h-2 rounded-full bg-secondary';
+                    statusText.className = 'font-jetbrains-mono text-xs text-secondary font-medium tracking-wide';
+                    break;
+                case 'waiting':
+                    statusDot.className = 'w-2 h-2 rounded-full bg-yellow-400 animate-pulse';
+                    statusText.className = 'font-jetbrains-mono text-xs text-yellow-400 font-medium tracking-wide';
+                    break;
+            }
+        }
+
+        function updateRoomCodeDisplay() {
+            if (appState.roomCode) {
+                roomCodeValue.textContent = appState.roomCode;
+                roomCodeDisplay.classList.remove('hidden');
+                lobbyRoomCode.textContent = appState.roomCode;
+            } else {
+                roomCodeDisplay.classList.add('hidden');
+                lobbyRoomCode.textContent = '------';
+            }
+        }
+
+        function showWaitingRoom() {
+            waitingRoomCode.textContent = appState.roomCode;
+            updateRoomCodeDisplay();
+            showView('waiting');
+            updateConnectionStatus('waiting', 'Waiting for opponent... 🟡');
+        }
+
+        function showLobby() {
+            lobbyUserName.textContent = appState.userName;
+            lobbyUserRole.textContent = appState.isHost ? 'Host' : 'Guest';
+            
+            // Update room code display
+            updateRoomCodeDisplay();
+            
+            // Show lobby view without stopping polling
+            showLobbyView();
+            
+            updateConnectionStatus('connected', 'Both Participants Connected 🟢');
+            
+            // Start motion sync polling
+            startMotionSyncPolling();
+            
+            // Start toss sync polling
+            startTossSyncPolling();
+            
+            // Check for synced motion
+            checkForSyncedMotion();
+            
+            // Check for synced toss
+            checkForSyncedToss();
+            
+            // Start auto-generate countdown if no motion yet
+            if (!appState.motion && appState.isHost) {
+                startMotionCountdown();
+            }
+            
+            // Reset card states based on motion existence
+            if (appState.motion) {
+                motionCard.classList.remove('opacity-50');
+                motionStatus.textContent = 'Generated ✓';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                motionText.textContent = appState.motion;
+                motionDisplay.classList.remove('hidden');
+                
+                // Lock motion generation - only host can generate, and only once
+                generateMotionBtn.disabled = true;
+                generateMotionBtn.textContent = 'Motion Locked';
+                generateMotionBtn.classList.add('opacity-50');
+                apiKeySection.classList.add('hidden');
+                
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                
+                // Show flip button for host only if no toss yet
+                if (!appState.side) {
+                    if (appState.isHost) {
+                        tossStatus.textContent = 'Auto-toss in 5s...';
+                        tossStatus.className = 'font-jetbrains-mono text-xs text-tertiary';
+                    } else {
+                        tossStatus.textContent = 'Waiting for Host';
+                        tossStatus.className = 'font-jetbrains-mono text-xs text-tertiary';
+                    }
+                } else {
+                    // Toss already completed
+                    tossResult.classList.remove('hidden');
+                    
+                    // Update toss result display
+                    const sideText = appState.side === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                    const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+                    const sideEmoji = appState.side === 'PRO' ? '✅' : '❌';
+                    
+                    tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${appState.side}`;
+                    tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                    tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                    
+                    tossStatus.textContent = 'Completed ✓';
+                    tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                }
+            } else {
+                motionCard.classList.remove('opacity-50');
+                motionStatus.textContent = 'Ready';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                motionDisplay.classList.add('hidden');
+                motionCountdown.classList.add('hidden');
+                skipAutoGenerateBtn.classList.add('hidden');
+                
+                // Only host can generate motion
+                if (!appState.isHost) {
+                    generateMotionBtn.disabled = true;
+                    generateMotionBtn.textContent = 'Waiting for Host';
+                    generateMotionBtn.classList.add('opacity-50');
+                    apiKeySection.classList.add('hidden');
+                } else {
+                    generateMotionBtn.disabled = false;
+                    generateMotionBtn.textContent = 'Generate AI Motion';
+                    generateMotionBtn.classList.remove('opacity-50');
+                    apiKeySection.classList.remove('hidden');
+                }
+                
+                tossCard.classList.add('opacity-50');
+                tossStatus.textContent = 'Locked';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-outline';
+            }
+            
+            // Reset prep card based on toss existence
+            if (appState.side) {
+                prepCard.classList.remove('opacity-50');
+                prepStatus.textContent = 'Ready';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                
+                // Check if timer was already started
+                const savedTimerStart = localStorage.getItem('debateP2P_timerStart');
+                if (savedTimerStart) {
+                    const elapsed = Math.floor((Date.now() - parseInt(savedTimerStart)) / 1000);
+                    const remaining = Math.max(0, 299 - elapsed);
+                    
+                    timerDisplay.classList.remove('hidden');
+                    updateTimerDisplay(remaining);
+                    
+                    if (remaining > 0) {
+                        prepStatus.textContent = 'Timer Running';
+                        prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                        
+                        // Resume countdown
+                        let timeLeft = remaining;
+                        appState.preparationTimer = setInterval(() => {
+                            timeLeft--;
+                            updateTimerDisplay(timeLeft);
+                            
+                            if (timeLeft <= 0) {
+                                clearInterval(appState.preparationTimer);
+                                appState.preparationTimer = null;
+                                prepStatus.textContent = 'Time\'s Up!';
+                                prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                                showEnterDebateButton();
+                                startHurryUpCountdown();
+                            }
+                        }, 1000);
+                        
+                        // Show enter button if enough time has passed
+                        if (elapsed >= 10) {
+                            showEnterDebateButton();
+                        }
+                    } else {
+                        // Timer already expired
+                        prepStatus.textContent = 'Time\'s Up!';
+                        prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                        showEnterDebateButton();
+                        startHurryUpCountdown();
+                    }
+                }
+            } else {
+                prepCard.classList.add('opacity-50');
+                prepStatus.textContent = 'Locked';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-outline';
+                timerDisplay.classList.add('hidden');
+                enterDebateBtn.classList.add('hidden');
+            }
+            
+            // Update participant sides
+            if (appState.side) {
+                lobbyUserSide.textContent = appState.side;
+                lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
+                lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+            } else {
+                lobbyUserSide.textContent = '---';
+                lobbyUserSide.className = 'font-jetbrains-mono text-sm text-tertiary mt-1 font-bold';
+                lobbyOpponentSide.textContent = '---';
+                lobbyOpponentSide.className = 'font-jetbrains-mono text-sm text-outline mt-1';
+            }
+            
+        }
+
+        function resetToLanding() {
+            appState.roomCode = null;
+            appState.isHost = false;
+            appState.opponentConnected = false;
+            appState.debatePhase = 'landing';
+            appState.motion = null;
+            appState.side = null;
+            
+            // Stop timers
+            stopPreparationTimer();
+            stopMotionCountdown();
+            stopTossCountdown();
+            stopHurryUpCountdown();
+            
+            localStorage.removeItem('debateP2P_roomCode');
+            localStorage.removeItem('debateP2P_isHost');
+            localStorage.removeItem('debateP2P_motion');
+            localStorage.removeItem('debateP2P_side');
+            localStorage.removeItem('debateP2P_timerStart');
+            
+            roomInput.value = '';
+            showView('landing');
+            updateConnectionStatus('online', 'Server Online 🟢');
+            updateRoomCodeDisplay();
+            
+            // Reset motion display and unlock generation
+            if (motionDisplay) {
+                motionDisplay.classList.add('hidden');
+                motionStatus.textContent = 'Ready';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
+            }
+            
+            // Reset countdown elements
+            if (motionCountdown) {
+                motionCountdown.classList.add('hidden');
+            }
+            if (skipAutoGenerateBtn) {
+                skipAutoGenerateBtn.classList.add('hidden');
+            }
+            if (tossCountdown) {
+                tossCountdown.classList.add('hidden');
+            }
+            if (hurryUpCountdown) {
+                hurryUpCountdown.classList.add('hidden');
+            }
+            
+            // Unlock motion generation button
+            if (generateMotionBtn) {
+                generateMotionBtn.disabled = false;
+                generateMotionBtn.textContent = 'Generate AI Motion';
+                generateMotionBtn.classList.remove('opacity-50');
+            }
+            
+            // Show API key section
+            if (apiKeySection) {
+                apiKeySection.classList.remove('hidden');
+            }
+            
+            // Reset toss card
+            if (tossCard) {
+                tossCard.classList.add('opacity-50');
+                tossStatus.textContent = 'Locked';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-outline';
+                tossResult.classList.add('hidden');
+                coinAnimation.classList.add('hidden');
+            }
+            
+            // Reset participant sides
+            if (lobbyUserSide && lobbyOpponentSide) {
+                lobbyUserSide.textContent = '---';
+                lobbyUserSide.className = 'font-jetbrains-mono text-sm text-tertiary mt-1 font-bold';
+                lobbyOpponentSide.textContent = '---';
+                lobbyOpponentSide.className = 'font-jetbrains-mono text-sm text-outline mt-1';
+            }
+            
+            // Reset prep card
+            if (prepCard) {
+                prepCard.classList.add('opacity-50');
+                prepStatus.textContent = 'Locked';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-outline';
+                timerDisplay.classList.add('hidden');
+                enterDebateBtn.classList.add('hidden');
+            }
+        }
+
+        // Simulate peer connection (for demo purposes)
+        function simulateOpponentJoin() {
+            if (waitingInterval) clearInterval(waitingInterval);
+            
+            waitingInterval = setInterval(() => {
+                if (appState.debatePhase === 'waiting' && !appState.opponentConnected) {
+                    // Simulate opponent joining after 3-8 seconds
+                    if (Math.random() > 0.7) {
+                        appState.opponentConnected = true;
+                        appState.debatePhase = 'lobby';
+                        clearInterval(waitingInterval);
+                        showLobby();
+                        console.log('Opponent joined!');
+                    }
+                }
+            }, 1000);
+        }
+
+        // Load saved data on page load
+        function loadSavedData() {
+            const savedName = localStorage.getItem('debateP2P_userName');
+            const savedRoomCode = localStorage.getItem('debateP2P_roomCode');
+            const savedIsHost = localStorage.getItem('debateP2P_isHost');
+            
+            if (savedName) {
+                nameInput.value = savedName;
+                appState.userName = savedName;
+            }
+            
+            if (savedRoomCode) {
+                roomInput.value = savedRoomCode;
+                appState.roomCode = savedRoomCode;
+            }
+            
+            if (savedIsHost === 'true') {
+                appState.isHost = true;
+            }
+        }
+
+        // Gemini API Integration
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+        function loadApiKey() {
+            const savedKey = localStorage.getItem('debateP2P_geminiKey');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+            }
+        }
+
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('debateP2P_geminiKey', key);
+            }
+        }
+
+        // Simulate motion synchronization between peers
+        function simulateMotionSync(motion) {
+            // In a real implementation, this would use WebRTC data channels
+            // For now, we simulate sync by updating localStorage
+            localStorage.setItem(`debateP2P_motion_${appState.roomCode}`, motion);
+            
+            // Simulate peer receiving the motion
+            setTimeout(() => {
+                console.log('Motion synced to peer:', motion);
+            }, 500);
+        }
+
+        // Check for synced motion (for peer who didn't generate)
+        function checkForSyncedMotion() {
+            const syncedMotion = localStorage.getItem(`debateP2P_motion_${appState.roomCode}`);
+            if (syncedMotion && !appState.motion) {
+                appState.motion = syncedMotion;
+                motionText.textContent = syncedMotion;
+                motionDisplay.classList.remove('hidden');
+                motionStatus.textContent = 'Received from host ✓';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                
+                // Stop auto-generate countdown
+                stopMotionCountdown();
+                
+                // Lock motion generation - can't be changed
+                generateMotionBtn.disabled = true;
+                generateMotionBtn.textContent = 'Motion Locked';
+                generateMotionBtn.classList.add('opacity-50');
+                apiKeySection.classList.add('hidden');
+                
+                // Unlock toss card
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                
+                // Guest waits for host's toss
+                if (!appState.isHost) {
+                    tossStatus.textContent = 'Waiting for Host';
+                } else {
+                    // Host starts auto-toss countdown
+                    startTossCountdown();
+                }
+                
+                console.log('Motion received from sync and locked:', syncedMotion);
+            }
+        }
+
+        // Auto-generate motion countdown
+        function startMotionCountdown() {
+            if (appState.motion || motionCountdownInterval) return;
+            
+            let countdown = 10;
+            
+            // Show countdown
+            motionCountdown.classList.remove('hidden');
+            motionCountdownValue.textContent = countdown;
+            motionStatus.textContent = 'Auto-generating...';
+            motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
+            
+            // Hide generate button temporarily
+            generateMotionBtn.classList.add('hidden');
+            skipAutoGenerateBtn.classList.remove('hidden');
+            
+            motionCountdownInterval = setInterval(() => {
+                countdown--;
+                motionCountdownValue.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    stopMotionCountdown();
+                    // Automatically generate motion
+                    if (appState.isHost) {
+                        generateMotion();
+                    }
+                }
+            }, 1000);
+            
+            console.log('Motion auto-generate countdown started');
+        }
+
+        function stopMotionCountdown() {
+            if (motionCountdownInterval) {
+                clearInterval(motionCountdownInterval);
+                motionCountdownInterval = null;
+            }
+            motionCountdown.classList.add('hidden');
+            skipAutoGenerateBtn.classList.add('hidden');
+            
+            if (!appState.motion) {
+                generateMotionBtn.classList.remove('hidden');
+            }
+        }
+
+        // Skip auto-generate button handler
+        skipAutoGenerateBtn.addEventListener('click', () => {
+            stopMotionCountdown();
+            generateMotionBtn.classList.remove('hidden');
+            motionStatus.textContent = 'Ready';
+            motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
+        });
+
+        // Auto-toss countdown
+        function startTossCountdown() {
+            if (appState.side || tossCountdownInterval) return;
+            
+            let countdown = 5;
+            
+            // Show countdown
+            tossCountdown.classList.remove('hidden');
+            tossCountdownValue.textContent = countdown;
+            tossStatus.textContent = 'Auto-tossing...';
+            tossStatus.className = 'font-jetbrains-mono text-xs text-tertiary';
+            
+            tossCountdownInterval = setInterval(() => {
+                countdown--;
+                tossCountdownValue.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    stopTossCountdown();
+                    // Automatically flip coin
+                    flipCoin();
+                }
+            }, 1000);
+            
+            console.log('Auto-toss countdown started');
+        }
+
+        function stopTossCountdown() {
+            if (tossCountdownInterval) {
+                clearInterval(tossCountdownInterval);
+                tossCountdownInterval = null;
+            }
+            tossCountdown.classList.add('hidden');
+        }
+
+        // Fallback motions for when API fails
+        const FALLBACK_MOTIONS = [
+            "This House would ban private ownership of firearms",
+            "This House believes that social media companies should be held liable for user-generated content",
+            "This House would implement a universal basic income",
+            "This House would abolish the death penalty worldwide",
+            "This House believes that voting should be mandatory in democratic elections",
+            "This House would replace fossil fuels with nuclear energy",
+            "This House would implement a four-day work week",
+            "This House believes that artificial intelligence should have legal personhood",
+            "This House would ban single-use plastics globally",
+            "This House believes that healthcare should be free at the point of use"
+        ];
+
+        async function generateMotion() {
+            const apiKey = apiKeyInput.value.trim() || GEMINI_API_KEY;
+            
+            if (!apiKey) {
+                showError('Please enter a Gemini API key');
+                return;
+            }
+
+            try {
+                // Stop countdown if running
+                stopMotionCountdown();
+                
+                // Save API key
+                saveApiKey();
+
+                // Show loading state
+                generateMotionBtn.disabled = true;
+                generateMotionBtn.textContent = 'Generating...';
+                motionLoading.classList.remove('hidden');
+                motionDisplay.classList.add('hidden');
+                motionCountdown.classList.add('hidden');
+                skipAutoGenerateBtn.classList.add('hidden');
+                motionStatus.textContent = 'Generating...';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
+
+                // Prepare API request
+                const prompt = `Generate a single, high-level competitive debate motion suitable for a formal debate. The motion should:
+- Begin with "This House would..." or "This House believes..."
+- Be controversial but debatable from both sides
+- Be relevant to current social, political, or economic issues
+- Be concise (1-2 sentences)
+- Not include any explanation or additional text
+
+Return ONLY the motion text, nothing else.`;
+
+                const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.8,
+                            topK: 40,
+                            topP: 0.95,
+                            maxOutputTokens: 1024,
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Gemini API Error:', errorData);
+                    throw new Error(errorData.error?.message || 'API request failed');
+                }
+
+                const data = await response.json();
+                console.log('Gemini API Response:', data);
+                const motion = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+                if (!motion) {
+                    console.error('No motion in response:', data);
+                    throw new Error('No motion generated');
+                }
+
+                // Clean up the motion (remove any quotes or extra text)
+                const cleanMotion = motion.replace(/^["']|["']$/g, '').trim();
+
+                // Update state
+                appState.motion = cleanMotion;
+                localStorage.setItem('debateP2P_motion', cleanMotion);
+
+                // Update UI
+                motionText.textContent = cleanMotion;
+                motionDisplay.classList.remove('hidden');
+                motionStatus.textContent = 'Generated ✓';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+
+                // Lock motion generation - can't be changed
+                generateMotionBtn.disabled = true;
+                generateMotionBtn.textContent = 'Motion Locked';
+                generateMotionBtn.classList.add('opacity-50');
+                apiKeySection.classList.add('hidden');
+
+                // Unlock toss card
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+
+                // Simulate sync with peer
+                simulateMotionSync(cleanMotion);
+
+                console.log('Motion generated and locked:', cleanMotion);
+
+            } catch (error) {
+                console.error('Error generating motion:', error);
+                console.log('Using fallback motion instead');
+                
+                // Stop countdown
+                stopMotionCountdown();
+                
+                // Use fallback motion
+                const fallbackMotion = FALLBACK_MOTIONS[Math.floor(Math.random() * FALLBACK_MOTIONS.length)];
+                
+                // Update state
+                appState.motion = fallbackMotion;
+                localStorage.setItem('debateP2P_motion', fallbackMotion);
+
+                // Update UI
+                motionText.textContent = fallbackMotion;
+                motionDisplay.classList.remove('hidden');
+                motionStatus.textContent = 'Fallback (API Error)';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-yellow-400';
+
+                // Lock motion generation - can't be changed
+                generateMotionBtn.disabled = true;
+                generateMotionBtn.textContent = 'Motion Locked';
+                generateMotionBtn.classList.add('opacity-50');
+                apiKeySection.classList.add('hidden');
+
+                // Unlock toss card
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+
+                // Simulate sync with peer
+                simulateMotionSync(fallbackMotion);
+
+                // Start auto-toss countdown (only for host)
+                if (appState.isHost) {
+                    startTossCountdown();
+                }
+
+                console.log('Fallback motion used and locked:', fallbackMotion);
+                
+                // Show warning but don't block the flow
+                showError('API error - using fallback motion');
+            } finally {
+                generateMotionBtn.disabled = false;
+                generateMotionBtn.textContent = 'Generate AI Motion';
+                motionLoading.classList.add('hidden');
+            }
+        }
+
+        // Generate Motion Button Handler
+        generateMotionBtn.addEventListener('click', generateMotion);
+
+        // Digital Toss Logic
+        function flipCoin() {
+            if (!appState.motion) {
+                showError('Motion must be generated first');
+                return;
+            }
+
+            try {
+                // Stop countdown
+                stopTossCountdown();
+                
+                // Show animation
+                coinAnimation.classList.remove('hidden');
+                tossResult.classList.add('hidden');
+                tossStatus.textContent = 'Flipping...';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-tertiary';
+
+                // Simulate coin flip (2 seconds)
+                setTimeout(() => {
+                    // Determine host's side (random)
+                    const hostSide = Math.random() > 0.5 ? 'PRO' : 'CON';
+                    
+                    // Assign complementary sides
+                    if (appState.isHost) {
+                        appState.side = hostSide;
+                    } else {
+                        // Guest gets opposite of host
+                        appState.side = hostSide === 'PRO' ? 'CON' : 'PRO';
+                    }
+
+                    // Save to localStorage for sync
+                    localStorage.setItem('debateP2P_side', appState.side);
+                    localStorage.setItem(`debateP2P_toss_${appState.roomCode}`, hostSide);
+
+                    // Update UI
+                    coinAnimation.classList.add('hidden');
+                    tossResult.classList.remove('hidden');
+                    
+                    const sideText = appState.side === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                    const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+                    const sideEmoji = appState.side === 'PRO' ? '✅' : '❌';
+                    
+                    tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${appState.side}`;
+                    tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                    tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                    
+                    tossStatus.textContent = 'Completed ✓';
+                    tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+
+                    // Unlock preparation card
+                    prepCard.classList.remove('opacity-50');
+                    prepStatus.textContent = 'Ready';
+                    prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+
+                    // Update participant info
+                    lobbyUserSide.textContent = appState.side;
+                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                    lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
+                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+
+                    // Sync with peer
+                    simulateTossSync(hostSide);
+
+                    // Start preparation timer automatically
+                    startPreparationTimer();
+
+                    console.log('Coin flip completed:', { hostSide, userSide: appState.side, isHost: appState.isHost });
+
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error flipping coin:', error);
+                showError('Failed to flip coin. Please try again.');
+                coinAnimation.classList.add('hidden');
+                tossStatus.textContent = 'Error - Retry';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-red-400';
+            }
+        }
+
+        // Simulate toss synchronization
+        function simulateTossSync(hostSide) {
+            localStorage.setItem(`debateP2P_toss_${appState.roomCode}`, hostSide);
+            
+            // Also sync timer start
+            if (!localStorage.getItem('debateP2P_timerStart')) {
+                localStorage.setItem('debateP2P_timerStart', Date.now().toString());
+            }
+            
+            setTimeout(() => {
+                console.log('Toss result synced to peer:', hostSide);
+            }, 500);
+        }
+
+        // Check for synced toss result
+        function checkForSyncedToss() {
+            const syncedToss = localStorage.getItem(`debateP2P_toss_${appState.roomCode}`);
+            if (syncedToss && !appState.side) {
+                // Stop auto-toss countdown if running
+                stopTossCountdown();
+                
+                // Calculate guest's side based on host's
+                appState.side = syncedToss === 'PRO' ? 'CON' : 'PRO';
+                
+                // Update UI
+                coinAnimation.classList.add('hidden');
+                tossResult.classList.remove('hidden');
+                
+                const sideText = appState.side === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+                const sideEmoji = appState.side === 'PRO' ? '✅' : '❌';
+                
+                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${appState.side}`;
+                tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                
+                tossStatus.textContent = 'Received from Host ✓';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+
+                // Unlock preparation card
+                prepCard.classList.remove('opacity-50');
+                prepStatus.textContent = 'Ready';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+
+                // Update participant info
+                lobbyUserSide.textContent = appState.side;
+                lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
+                lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+
+                // Start preparation timer automatically
+                startPreparationTimer();
+
+                console.log('Toss result received from sync:', { hostSide: syncedToss, userSide: appState.side });
+            }
+        }
+
+        // Preparation Timer Logic
+        function startPreparationTimer() {
+            let timeLeft = 299; // 4 minutes 59 seconds in seconds
+            
+            // Save timer start time
+            localStorage.setItem('debateP2P_timerStart', Date.now().toString());
+            
+            // Show timer display
+            timerDisplay.classList.remove('hidden');
+            prepStatus.textContent = 'Timer Running';
+            prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+            
+            // Update initial display
+            updateTimerDisplay(timeLeft);
+            
+            // Start countdown
+            appState.preparationTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay(timeLeft);
+                
+                if (timeLeft <= 0) {
+                    clearInterval(appState.preparationTimer);
+                    appState.preparationTimer = null;
+                    prepStatus.textContent = 'Time\'s Up!';
+                    prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                    showEnterDebateButton();
+                    startHurryUpCountdown();
+                }
+            }, 1000);
+            
+            // Show enter button after 10 seconds (for early entry)
+            setTimeout(() => {
+                if (appState.preparationTimer) {
+                    showEnterDebateButton();
+                }
+            }, 10000);
+            
+            console.log('Preparation timer started');
+        }
+
+        // Hurry Up Countdown Logic
+        function startHurryUpCountdown() {
+            let countdown = 10;
+            
+            // Show hurry up countdown
+            hurryUpCountdown.classList.remove('hidden');
+            hurryUpValue.textContent = countdown;
+            prepStatus.textContent = 'Hurry Up!';
+            prepStatus.className = 'font-jetbrains-mono text-xs text-red-400';
+            
+            hurryUpCountdownInterval = setInterval(() => {
+                countdown--;
+                hurryUpValue.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    stopHurryUpCountdown();
+                    // Automatically enter debate arena
+                    enterDebateArena();
+                }
+            }, 1000);
+            
+            console.log('Hurry up countdown started');
+        }
+
+        function stopHurryUpCountdown() {
+            if (hurryUpCountdownInterval) {
+                clearInterval(hurryUpCountdownInterval);
+                hurryUpCountdownInterval = null;
+            }
+            hurryUpCountdown.classList.add('hidden');
+        }
+
+        function enterDebateArena() {
+            try {
+                stopPreparationTimer();
+                stopHurryUpCountdown();
+                
+                // Transition to debate arena
+                appState.debatePhase = 'debate';
+                showView('arena');
+                
+                // Initialize arena
+                initializeArena();
+                
+                console.log('Entering debate arena');
+                
+            } catch (error) {
+                console.error('Error entering debate:', error);
+                showError('Failed to enter debate arena. Please try again.');
+            }
+        }
+
+        // Arena State
+        let localStream = null;
+        let remoteStream = null;
+        let isMicMuted = false;
+        let isVideoOff = false;
+        let isSoundOff = false;
+
+        // Initialize Arena
+        function initializeArena() {
+            // Update motion display
+            if (appState.motion) {
+                arenaMotion.textContent = appState.motion;
+            }
+            
+            // Update user info
+            localUserName.textContent = appState.userName;
+            localUserSide.textContent = appState.side || '---';
+            localUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+            
+            remoteUserName.textContent = 'Opponent';
+            if (appState.side) {
+                remoteUserSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
+                remoteUserSide.className = `font-jetbrains-mono text-sm ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+            } else {
+                remoteUserSide.textContent = '---';
+                remoteUserSide.className = 'font-jetbrains-mono text-sm text-outline';
+            }
+            
+            // Start camera automatically
+            startLocalVideo();
+            
+            console.log('Arena initialized');
+        }
+
+        // WebRTC Functions
+        async function startLocalVideo() {
+            try {
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: true
+                });
+                
+                // Attach to local video element
+                localVideo.srcObject = localStream;
+                localVideoPlaceholder.classList.add('hidden');
+                
+                // Update status indicators
+                localVideoStatus.textContent = '🟢';
+                localAudioStatus.textContent = '🟢';
+                
+                console.log('Local video started');
+                
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                showError('Could not access camera/microphone. Please check permissions.');
+            }
+        }
+
+        function stopLocalVideo() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            localVideo.srcObject = null;
+            localVideoPlaceholder.classList.remove('hidden');
+            localVideoStatus.textContent = '🔴';
+            localAudioStatus.textContent = '🔇';
+        }
+
+        // Toggle Functions
+        function toggleMic() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    isMicMuted = !isMicMuted;
+                    audioTrack.enabled = !isMicMuted;
+                    localAudioStatus.textContent = isMicMuted ? '🔇' : '🟢';
+                    micIcon.textContent = isMicMuted ? '🎤' : '🔇';
+                    console.log('Mic toggled:', isMicMuted);
+                }
+            }
+        }
+
+        function toggleVideo() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    isVideoOff = !isVideoOff;
+                    videoTrack.enabled = !isVideoOff;
+                    localVideoStatus.textContent = isVideoOff ? '🔴' : '🟢';
+                    videoIcon.textContent = isVideoOff ? '📷' : '🔴';
+                    if (isVideoOff) {
+                        localVideoPlaceholder.classList.remove('hidden');
+                    } else {
+                        localVideoPlaceholder.classList.add('hidden');
+                    }
+                    console.log('Video toggled:', isVideoOff);
+                }
+            }
+        }
+
+        function toggleSound() {
+            isSoundOff = !isSoundOff;
+            localVideo.muted = isSoundOff;
+            remoteVideo.muted = isSoundOff;
+            soundIcon.textContent = isSoundOff ? '🔊' : '🔇';
+            console.log('Sound toggled:', isSoundOff);
+        }
+
+        // Event Listeners
+        toggleMicBtn.addEventListener('click', toggleMic);
+        toggleVideoBtn.addEventListener('click', toggleVideo);
+        toggleSoundBtn.addEventListener('click', toggleSound);
+        leaveRoomBtn.addEventListener('click', () => {
+            stopLocalVideo();
+            resetToLanding();
+        });
+
+        function updateTimerDisplay(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            const display = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            timerValue.textContent = display;
+            
+            // Change color when time is running low
+            if (seconds <= 60) {
+                timerValue.className = 'font-jetbrains-mono text-4xl font-bold text-red-400 tracking-wider';
+                timerLabel.textContent = 'Hurry Up!';
+            } else if (seconds <= 120) {
+                timerValue.className = 'font-jetbrains-mono text-4xl font-bold text-yellow-400 tracking-wider';
+                timerLabel.textContent = 'Time Running Low';
+            }
+        }
+
+        function showEnterDebateButton() {
+            enterDebateBtn.classList.remove('hidden');
+            prepStatus.textContent = 'Ready to Enter';
+            prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+        }
+
+        function stopPreparationTimer() {
+            if (appState.preparationTimer) {
+                clearInterval(appState.preparationTimer);
+                appState.preparationTimer = null;
+            }
+        }
+
+        // Enter Debate Button Handler
+        enterDebateBtn.addEventListener('click', enterDebateArena);
+
+        // Motion sync polling
+        let motionSyncInterval = null;
+        function startMotionSyncPolling() {
+            if (motionSyncInterval) clearInterval(motionSyncInterval);
+            
+            motionSyncInterval = setInterval(() => {
+                if (appState.currentView === 'lobby' && !appState.motion) {
+                    checkForSyncedMotion();
+                }
+            }, 1000);
+        }
+
+        function stopMotionSyncPolling() {
+            if (motionSyncInterval) {
+                clearInterval(motionSyncInterval);
+                motionSyncInterval = null;
+            }
+        }
+
+        // Toss sync polling
+        let tossSyncInterval = null;
+        function startTossSyncPolling() {
+            if (tossSyncInterval) clearInterval(tossSyncInterval);
+            
+            tossSyncInterval = setInterval(() => {
+                if (appState.currentView === 'lobby' && appState.motion && !appState.side) {
+                    checkForSyncedToss();
+                }
+            }, 1000);
+        }
+
+        function stopTossSyncPolling() {
+            if (tossSyncInterval) {
+                clearInterval(tossSyncInterval);
+                tossSyncInterval = null;
+            }
+        }
+
+        // Initialize
+        loadSavedData();
+        loadApiKey();
+        
+        // Check for existing motion on load
+        const savedMotion = localStorage.getItem('debateP2P_motion');
+        if (savedMotion) {
+            appState.motion = savedMotion;
+        }
+        
+        // Check for existing side on load
+        const savedSide = localStorage.getItem('debateP2P_side');
+        if (savedSide) {
+            appState.side = savedSide;
+        }
+
+        // DOM loaded handler for motion and toss display
+        document.addEventListener('DOMContentLoaded', () => {
+            if (appState.motion && motionText && motionDisplay) {
+                motionText.textContent = appState.motion;
+                motionDisplay.classList.remove('hidden');
+                motionStatus.textContent = 'Loaded ✓';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                
+                // Unlock toss card if motion exists
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+            }
+            
+            if (appState.side && tossResult && tossResultText && tossSideText) {
+                const sideText = appState.side === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
+                const sideEmoji = appState.side === 'PRO' ? '✅' : '❌';
+                
+                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${appState.side}`;
+                tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                tossResult.classList.remove('hidden');
+                tossStatus.textContent = 'Loaded ✓';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                
+                // Unlock prep card if toss exists
+                prepCard.classList.remove('opacity-50');
+                prepStatus.textContent = 'Ready';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                
+                // Update participant info
+                if (lobbyUserSide && lobbyOpponentSide) {
+                    lobbyUserSide.textContent = appState.side;
+                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                    lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
+                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                }
+                
+                // Check if timer was running and restore it
+                const savedTimerStart = localStorage.getItem('debateP2P_timerStart');
+                if (savedTimerStart && appState.side) {
+                    const elapsed = Math.floor((Date.now() - parseInt(savedTimerStart)) / 1000);
+                    const remaining = Math.max(0, 299 - elapsed);
+                    
+                    if (remaining > 0) {
+                        timerDisplay.classList.remove('hidden');
+                        updateTimerDisplay(remaining);
+                        prepStatus.textContent = 'Timer Running';
+                        prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                        
+                        // Resume countdown
+                        let timeLeft = remaining;
+                        appState.preparationTimer = setInterval(() => {
+                            timeLeft--;
+                            updateTimerDisplay(timeLeft);
+                            
+                            if (timeLeft <= 0) {
+                                clearInterval(appState.preparationTimer);
+                                appState.preparationTimer = null;
+                                prepStatus.textContent = 'Time\'s Up!';
+                                prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                                showEnterDebateButton();
+                                startHurryUpCountdown();
+                            }
+                        }, 1000);
+                        
+                        // Show enter button if enough time has passed
+                        if (elapsed >= 10) {
+                            showEnterDebateButton();
+                        }
+                    } else {
+                        // Timer already expired
+                        timerDisplay.classList.remove('hidden');
+                        updateTimerDisplay(0);
+                        prepStatus.textContent = 'Time\'s Up!';
+                        prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                        showEnterDebateButton();
+                    }
+                }
+            }
+        });
+
+        console.log('DebateP2P Application Initialized');
+    </script>
+</body>
+</html>
