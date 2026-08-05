@@ -428,9 +428,15 @@
                                     </p>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <span id="debateTimer" class="font-jetbrains-mono text-2xl font-bold text-secondary">00:00</span>
-                                <span class="font-jetbrains-mono text-xs text-secondary">TIME</span>
+                            <div class="flex items-center space-x-4">
+                                <div class="text-right">
+                                    <p class="font-jetbrains-mono text-xs text-primary mb-1">CURRENT SPEAKER</p>
+                                    <p id="currentSpeaker" class="font-dm-sans text-lg font-bold text-secondary">-</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-jetbrains-mono text-xs text-primary mb-1">TURN TIME</p>
+                                    <p id="turnTimer" class="font-jetbrains-mono text-3xl font-bold text-secondary">00:00</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -581,6 +587,15 @@
             </div>
         </div>
     </main>
+
+    <!-- Loading Screen Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-50 glass-strong flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <h2 class="font-dm-sans text-2xl font-bold text-primary mb-3">Result is coming...</h2>
+            <p class="font-jetbrains-mono text-lg text-tertiary">⏳ Preparing AI Judge Adjudication</p>
+        </div>
+    </div>
 
     <script>
         // Application state will be managed here
@@ -822,9 +837,12 @@
                 stopHurryUpCountdown();
             }
             
-            // Stop video when leaving arena
+            // Stop video and turn management when leaving arena
             if (appState.currentView === 'arena' && viewName !== 'arena') {
                 stopLocalVideo();
+                stopSpeechRecognition();
+                if (turnTimer) clearInterval(turnTimer);
+                if (transitionTimer) clearInterval(transitionTimer);
             }
             
             landingView.classList.add('hidden');
@@ -1666,6 +1684,276 @@
         let isSpeechRecognitionActive = false;
         let transcriptStartTime = null;
         let currentInterimEntry = null;
+        
+        // Turn Management State
+        let currentTurn = 0;
+        let turnTimer = null;
+        let transitionTimer = null;
+        let isTransitionPhase = false;
+        let audioContext = null;
+        
+        // Turn Configuration
+        const TURNS = [
+            { speaker: 'PRO', duration: 180 },  // Turn 1: PRO - 3 minutes
+            { speaker: 'CON', duration: 180 },  // Turn 2: CON - 3 minutes  
+            { speaker: 'PRO', duration: 120 },  // Turn 3: PRO - 2 minutes
+            { speaker: 'CON', duration: 120 }   // Turn 4: CON - 2 minutes
+        ];
+        
+        const TRANSITION_DURATION = 10; // 10 seconds between turns
+        
+        // Audio Alert System
+        function initializeAudioContext() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('Audio context initialized');
+                return true;
+            } catch (error) {
+                console.error('Web Audio API not supported:', error);
+                return false;
+            }
+        }
+        
+        function playTimeWarningAlert() {
+            if (!audioContext) {
+                initializeAudioContext();
+            }
+            
+            if (!audioContext) return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800; // 800 Hz tone
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                console.log('Time warning alert played');
+            } catch (error) {
+                console.error('Error playing audio alert:', error);
+            }
+        }
+        
+        // Turn Management Functions
+        function startTurnManagement() {
+            currentTurn = 0;
+            initializeAudioContext();
+            startTurn(0);
+        }
+        
+        function startTurn(turnIndex) {
+            if (turnIndex >= TURNS.length) {
+                // All turns completed
+                finalizeDebate();
+                return;
+            }
+            
+            currentTurn = turnIndex;
+            isTransitionPhase = false;
+            const turn = TURNS[turnIndex];
+            
+            // Update UI
+            updateCurrentSpeaker(turn.speaker);
+            updateTurnTimer(turn.duration);
+            
+            // Apply strict muting based on current speaker
+            applyStrictMuting(turn.speaker);
+            
+            // Control speech recognition based on user's side and current speaker
+            controlSpeechRecognitionForTurn(turn.speaker);
+            
+            // Start turn timer
+            let timeLeft = turn.duration;
+            turnTimer = setInterval(() => {
+                timeLeft--;
+                updateTurnTimer(timeLeft);
+                
+                // Audio warning in final 30 seconds
+                if (timeLeft === 30) {
+                    playTimeWarningAlert();
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(turnTimer);
+                    startTransition(turnIndex);
+                }
+            }, 1000);
+            
+            console.log(`Turn ${turnIndex + 1} started: ${turn.speaker} speaker, ${turn.duration} seconds`);
+        }
+        
+        function startTransition(turnIndex) {
+            isTransitionPhase = true;
+            let countdown = TRANSITION_DURATION;
+            
+            // Update UI to show transition
+            updateCurrentSpeaker('TRANSITION');
+            updateTurnTimer(countdown);
+            
+            // Mute both speakers during transition
+            muteAllSpeakers();
+            stopSpeechRecognition();
+            
+            transitionTimer = setInterval(() => {
+                countdown--;
+                updateTurnTimer(countdown);
+                
+                if (countdown <= 0) {
+                    clearInterval(transitionTimer);
+                    startTurn(turnIndex + 1);
+                }
+            }, 1000);
+            
+            console.log(`Transition started: ${TRANSITION_DURATION} seconds until next turn`);
+        }
+        
+        function applyStrictMuting(activeSpeaker) {
+            const userSide = appState.side;
+            
+            if (userSide === activeSpeaker) {
+                // User is the active speaker - unmute them
+                enableUserAudio();
+            } else {
+                // User is not the active speaker - strictly mute them
+                disableUserAudio();
+            }
+        }
+        
+        function muteAllSpeakers() {
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = false;
+                });
+            }
+            
+            // Update UI to show muted state
+            localAudioStatus.textContent = '🔇';
+            micIcon.textContent = '🔇';
+            isMicMuted = true;
+            
+            console.log('All speakers muted during transition');
+        }
+        
+        function enableUserAudio() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = true;
+                    localAudioStatus.textContent = '🟢';
+                    micIcon.textContent = '🎤';
+                    isMicMuted = false;
+                }
+            }
+            console.log('User audio enabled');
+        }
+        
+        function disableUserAudio() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = false;
+                    localAudioStatus.textContent = '🔇';
+                    micIcon.textContent = '🔇';
+                    isMicMuted = true;
+                }
+            }
+            console.log('User audio disabled');
+        }
+        
+        function controlSpeechRecognitionForTurn(activeSpeaker) {
+            const userSide = appState.side;
+            
+            if (userSide === activeSpeaker) {
+                // User is speaking - enable speech recognition
+                if (!isSpeechRecognitionActive) {
+                    startSpeechRecognition();
+                }
+            } else {
+                // User is not speaking - disable speech recognition
+                if (isSpeechRecognitionActive) {
+                    stopSpeechRecognition();
+                }
+            }
+        }
+        
+        function updateCurrentSpeaker(speaker) {
+            const currentSpeakerEl = document.getElementById('currentSpeaker');
+            if (currentSpeakerEl) {
+                if (speaker === 'TRANSITION') {
+                    currentSpeakerEl.textContent = 'Transition...';
+                    currentSpeakerEl.className = 'font-dm-sans text-lg font-bold text-tertiary';
+                } else {
+                    currentSpeakerEl.textContent = speaker;
+                    const colorClass = speaker === 'PRO' ? 'text-secondary' : 'text-red-400';
+                    currentSpeakerEl.className = `font-dm-sans text-lg font-bold ${colorClass}`;
+                }
+            }
+        }
+        
+        function updateTurnTimer(seconds) {
+            const turnTimerEl = document.getElementById('turnTimer');
+            if (turnTimerEl) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                const display = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                turnTimerEl.textContent = display;
+                
+                // Change color in final 30 seconds
+                if (seconds <= 30) {
+                    turnTimerEl.className = 'font-jetbrains-mono text-3xl font-bold text-red-400';
+                } else {
+                    turnTimerEl.className = 'font-jetbrains-mono text-3xl font-bold text-secondary';
+                }
+            }
+        }
+        
+        function finalizeDebate() {
+            console.log('Debate finalized, preparing results...');
+            
+            // Stop all timers
+            if (turnTimer) clearInterval(turnTimer);
+            if (transitionTimer) clearInterval(transitionTimer);
+            
+            // Stop speech recognition
+            stopSpeechRecognition();
+            
+            // Stop video
+            stopLocalVideo();
+            
+            // Aggregate transcript
+            const aggregatedTranscript = appState.transcript.map(entry => 
+                `[${entry.timestamp} - ${entry.side}]: "${entry.text}"`
+            ).join('\n');
+            
+            console.log('Aggregated transcript:', aggregatedTranscript);
+            
+            // Save aggregated transcript for AI judge
+            localStorage.setItem('debateP2P_finalTranscript', aggregatedTranscript);
+            localStorage.setItem('debateP2P_motion', appState.motion);
+            localStorage.setItem('debateP2P_userSide', appState.side);
+            
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.remove('hidden');
+            
+            // Prepare for Part 10 (AI Judge Dashboard)
+            console.log('Transitioning to AI Judge Dashboard...');
+            
+            // Note: Part 10 implementation will handle the actual transition
+            setTimeout(() => {
+                // This will be implemented in Part 10
+                console.log('Ready for Part 10: AI Judge Adjudication Dashboard');
+            }, 3000);
+        }
 
         // Initialize Arena
         function initializeArena() {
@@ -1691,8 +1979,8 @@
             // Start camera automatically
             startLocalVideo();
             
-            // Start speech recognition automatically
-            startSpeechRecognition();
+            // Start turn management instead of just speech recognition
+            startTurnManagement();
             
             console.log('Arena initialized');
         }
@@ -1738,6 +2026,12 @@
 
         // Toggle Functions
         function toggleMic() {
+            // Prevent manual mic toggling during turn management
+            if (turnTimer || transitionTimer) {
+                showError('Microphone is controlled by turn management system');
+                return;
+            }
+            
             if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
                 if (audioTrack) {
