@@ -1284,9 +1284,11 @@
             motionCountdownInterval = setInterval(() => {
                 countdown--;
                 motionCountdownValue.textContent = countdown;
+                console.log('Motion countdown:', countdown);
                 
                 if (countdown <= 0) {
                     stopMotionCountdown();
+                    console.log('Motion countdown finished, generating motion');
                     // Automatically generate motion
                     if (appState.isHost) {
                         generateMotion();
@@ -1371,6 +1373,8 @@
                 setTimeout(() => {
                     const randomMotion = PRESET_MOTIONS[Math.floor(Math.random() * PRESET_MOTIONS.length)];
                     
+                    console.log('Selected motion:', randomMotion);
+                    
                     // Update state
                     appState.motion = randomMotion;
                     localStorage.setItem('debateP2P_motion', randomMotion);
@@ -1396,10 +1400,12 @@
 
                     // Start auto-toss countdown (only for host)
                     if (appState.isHost) {
+                        console.log('Starting auto-toss countdown as host');
                         startTossCountdown();
                     }
 
                     console.log('Motion generated and locked:', randomMotion);
+                    console.log('Motion display visible:', !motionDisplay.classList.contains('hidden'));
                     
                     motionLoading.classList.add('hidden');
                 }, 500); // Small delay for effect
