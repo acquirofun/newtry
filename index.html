@@ -239,8 +239,8 @@
                                     Motion
                                 </h3>
                                 
-                                <!-- API Key Input -->
-                                <div id="apiKeySection" class="mb-3">
+                                <!-- API Key Input (Hidden - using pre-set motions) -->
+                                <div id="apiKeySection" class="hidden mb-3">
                                     <input 
                                         type="password" 
                                         id="apiKeyInput" 
@@ -261,7 +261,7 @@
                                     id="generateMotionBtn"
                                     class="w-full py-2 px-4 rounded-lg bg-primary-dark text-white font-dm-sans text-sm font-semibold tracking-wide hover:bg-primary transition-all duration-200 border border-primary/30 mb-3"
                                 >
-                                    Generate AI Motion
+                                    Generate Motion
                                 </button>
                                 
                                 <!-- Skip Auto-Generate Button -->
@@ -1193,6 +1193,25 @@
             }
         }
 
+        // Pre-set debate motions
+        const PRESET_MOTIONS = [
+            "Social media platforms should be held legally responsible for content posted by their users",
+            "Artificial intelligence will do more harm than good to humanity",
+            "The voting age should be lowered to 16 in democratic elections",
+            "Governments should provide universal basic income to all citizens",
+            "Remote work is better for employee productivity than traditional office work",
+            "Genetic engineering of human embryos should be banned",
+            "Social media companies should be required to verify user identities",
+            "Nuclear energy is necessary for combating climate change",
+            "The sale of violent video games should be restricted to minors",
+            "Universal healthcare should be a fundamental human right",
+            "Cryptocurrency should be regulated as traditional financial instruments",
+            "School uniforms should be mandatory in all public schools",
+            "The death penalty should be abolished worldwide",
+            "Space exploration funding should be prioritized over solving Earth's problems",
+            "Social media has done more harm than good to democracy"
+        ];
+
         // Gemini API Integration
         const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
@@ -1360,19 +1379,9 @@
         ];
 
         async function generateMotion() {
-            const apiKey = apiKeyInput.value.trim() || GEMINI_API_KEY;
-            
-            if (!apiKey) {
-                showError('Please enter a Gemini API key');
-                return;
-            }
-
             try {
                 // Stop countdown if running
                 stopMotionCountdown();
-                
-                // Save API key
-                saveApiKey();
 
                 // Show loading state
                 generateMotionBtn.disabled = true;
@@ -1384,79 +1393,47 @@
                 motionStatus.textContent = 'Generating...';
                 motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
 
-                // Prepare API request
-                const prompt = `Generate a single, high-level competitive debate motion suitable for a formal debate. The motion should:
-- Begin with "This House would..." or "This House believes..."
-- Be controversial but debatable from both sides
-- Be relevant to current social, political, or economic issues
-- Be concise (1-2 sentences)
-- Not include any explanation or additional text
+                // Use random pre-set motion (no API required)
+                setTimeout(() => {
+                    const randomMotion = PRESET_MOTIONS[Math.floor(Math.random() * PRESET_MOTIONS.length)];
+                    
+                    // Update state
+                    appState.motion = randomMotion;
+                    localStorage.setItem('debateP2P_motion', randomMotion);
+                    
+                    // Update UI
+                    motionText.textContent = randomMotion;
+                    motionDisplay.classList.remove('hidden');
+                    motionStatus.textContent = 'Generated ✓';
+                    motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
 
-Return ONLY the motion text, nothing else.`;
+                    // Lock motion generation - can't be changed
+                    generateMotionBtn.disabled = true;
+                    generateMotionBtn.textContent = 'Motion Locked';
+                    generateMotionBtn.classList.add('opacity-50');
+                    apiKeySection.classList.add('hidden');
 
-                const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.8,
-                            topK: 40,
-                            topP: 0.95,
-                            maxOutputTokens: 1024,
-                        }
-                    })
-                });
+                    // Unlock toss card
+                    tossCard.classList.remove('opacity-50');
+                    tossStatus.textContent = 'Ready';
+                    tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Gemini API Error:', errorData);
-                    throw new Error(errorData.error?.message || 'API request failed');
-                }
+                    // Simulate sync with peer
+                    simulateMotionSync(randomMotion);
 
-                const data = await response.json();
-                console.log('Gemini API Response:', data);
-                const motion = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-                if (!motion) {
-                    console.error('No motion in response:', data);
-                    throw new Error('No motion generated');
-                }
-
-                // Clean up the motion (remove any quotes or extra text)
-                const cleanMotion = motion.replace(/^["']|["']$/g, '').trim();
-
-                // Update state
-                appState.motion = cleanMotion;
-                localStorage.setItem('debateP2P_motion', cleanMotion);
-
-                // Update UI
-                motionText.textContent = cleanMotion;
-                motionDisplay.classList.remove('hidden');
-                motionStatus.textContent = 'Generated ✓';
-                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-
-                // Lock motion generation - can't be changed
-                generateMotionBtn.disabled = true;
-                generateMotionBtn.textContent = 'Motion Locked';
-                generateMotionBtn.classList.add('opacity-50');
-                apiKeySection.classList.add('hidden');
-
-                // Unlock toss card
-                tossCard.classList.remove('opacity-50');
-                tossStatus.textContent = 'Ready';
-                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
-
-                // Simulate sync with peer
-                simulateMotionSync(cleanMotion);
-
-                console.log('Motion generated and locked:', cleanMotion);
+                    console.log('Motion generated and locked:', randomMotion);
+                    
+                    motionLoading.classList.add('hidden');
+                }, 500); // Small delay for effect
+                
+            } catch (error) {
+                console.error('Error generating motion:', error);
+                showError('Failed to generate motion. Please try again.');
+                motionLoading.classList.add('hidden');
+                generateMotionBtn.disabled = false;
+                generateMotionBtn.textContent = 'Generate Motion';
+            }
+        }
 
             } catch (error) {
                 console.error('Error generating motion:', error);
