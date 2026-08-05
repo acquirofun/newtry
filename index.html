@@ -283,7 +283,7 @@
                                     </div>
                                 </div>
                                 
-                                <div id="motionStatus" class="font-jetbrains-mono text-xs text-outline">
+                                <div id="motionStatus" class="hidden font-jetbrains-mono text-xs text-outline">
                                     Ready
                                 </div>
                             </div>
@@ -1271,11 +1271,10 @@
             
             let countdown = 10;
             
-            // Show countdown
+            // Hide status and show countdown
+            motionStatus.classList.add('hidden');
             motionCountdown.classList.remove('hidden');
             motionCountdownValue.textContent = countdown;
-            motionStatus.textContent = 'Auto-generating...';
-            motionStatus.className = 'font-jetbrains-mono text-xs text-primary';
             
             // Hide generate button temporarily
             generateMotionBtn.classList.add('hidden');
@@ -1306,6 +1305,7 @@
             }
             motionCountdown.classList.add('hidden');
             skipAutoGenerateBtn.classList.add('hidden');
+            motionStatus.classList.remove('hidden');
             
             if (!appState.motion) {
                 generateMotionBtn.classList.remove('hidden');
@@ -1382,6 +1382,7 @@
                     // Update UI
                     motionText.textContent = randomMotion;
                     motionDisplay.classList.remove('hidden');
+                    motionStatus.classList.remove('hidden');
                     motionStatus.textContent = 'Generated ✓';
                     motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
 
