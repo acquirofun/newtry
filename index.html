@@ -909,15 +909,26 @@
                 }
 
                 // Initialize socket if not already connected
-                if (!socket || !socket.connected) {
+                if (!socket) {
                     initializeSocket();
-                    // Wait for connection
-                    await new Promise((resolve) => {
-                        if (socket.connected) {
+                }
+
+                // Wait for socket connection with timeout
+                if (!socket.connected) {
+                    await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Socket connection timeout'));
+                        }, 5000);
+                        
+                        socket.once('connect', () => {
+                            clearTimeout(timeout);
                             resolve();
-                        } else {
-                            socket.on('connect', resolve);
-                        }
+                        });
+                        
+                        socket.once('connect_error', (error) => {
+                            clearTimeout(timeout);
+                            reject(error);
+                        });
                     });
                 }
 
@@ -953,7 +964,7 @@
                 
             } catch (error) {
                 console.error('Error creating room:', error);
-                showError('Failed to create room. Please try again.');
+                showError('Failed to create room. Please check your connection and try again.');
             }
         });
 
@@ -967,15 +978,26 @@
                 }
 
                 // Initialize socket if not already connected
-                if (!socket || !socket.connected) {
+                if (!socket) {
                     initializeSocket();
-                    // Wait for connection
-                    await new Promise((resolve) => {
-                        if (socket.connected) {
+                }
+
+                // Wait for socket connection with timeout
+                if (!socket.connected) {
+                    await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Socket connection timeout'));
+                        }, 5000);
+                        
+                        socket.once('connect', () => {
+                            clearTimeout(timeout);
                             resolve();
-                        } else {
-                            socket.on('connect', resolve);
-                        }
+                        });
+                        
+                        socket.once('connect_error', (error) => {
+                            clearTimeout(timeout);
+                            reject(error);
+                        });
                     });
                 }
 
@@ -983,7 +1005,7 @@
                 appState.userName = validation.name;
                 appState.roomCode = validation.roomCode;
                 appState.isHost = false;
-                appState.debatePhase = 'lobby';
+                appState.debatePhase = 'waiting';
                 appState.roomId = validation.roomCode;
 
                 localStorage.setItem('debateP2P_userName', validation.name);
@@ -1007,7 +1029,7 @@
                 
             } catch (error) {
                 console.error('Error joining room:', error);
-                showError('Failed to join room. Please try again.');
+                showError('Failed to join room. Please check your connection and try again.');
             }
         });
 
@@ -2625,19 +2647,31 @@ Provide constructive feedback in the feedback section.`;
 
             socket.on('join-success', ({ roomId }) => {
                 console.log('Successfully joined room:', roomId);
+                // Guest waits in waiting room until room-ready event
                 if (appState.currentView === 'waiting' && !appState.isHost) {
-                    // Guest transitioning to lobby after successful join
-                    appState.debatePhase = 'lobby';
-                    showLobby();
+                    // Keep waiting for room-ready event
+                    console.log('Guest waiting for room-ready event');
                 }
             });
 
-            socket.on('room-ready', ({ users }) => {
+            socket.on('room-ready', async ({ users }) => {
                 console.log('Room ready with users:', users);
                 if (appState.currentView === 'waiting') {
                     appState.opponentConnected = true;
                     appState.debatePhase = 'lobby';
                     showLobby();
+                    
+                    // Host initiates WebRTC connection
+                    if (appState.isHost) {
+                        console.log('Host initiating WebRTC connection');
+                        await startLocalVideo();
+                        await createPeerConnection();
+                        
+                        // Create and send offer
+                        const offer = await peerConnection.createOffer();
+                        await peerConnection.setLocalDescription(offer);
+                        socket.emit('offer', { roomId: appState.roomId, offer });
+                    }
                 }
             });
 
@@ -2709,18 +2743,27 @@ Provide constructive feedback in the feedback section.`;
 
             socket.on('offer', async ({ offer, senderId }) => {
                 console.log('Received offer from:', senderId);
-                if (!peerConnection) {
-                    await createPeerConnection();
+                try {
+                    if (!peerConnection) {
+                        await startLocalVideo();
+                        await createPeerConnection();
+                    }
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    socket.emit('answer', { roomId: appState.roomId, answer });
+                } catch (error) {
+                    console.error('Error handling offer:', error);
                 }
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.emit('answer', { roomId: appState.roomId, answer });
             });
 
             socket.on('answer', async ({ answer, senderId }) => {
                 console.log('Received answer from:', senderId);
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                try {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                } catch (error) {
+                    console.error('Error handling answer:', error);
+                }
             });
 
             socket.on('ice-candidate', async ({ candidate, senderId }) => {

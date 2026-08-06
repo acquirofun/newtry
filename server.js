@@ -94,7 +94,8 @@ io.on('connection', (socket) => {
         if (room) {
             room.motion = motion;
             rooms.set(roomId, room);
-            socket.to(roomId).emit('motion-synced', { motion });
+            // Broadcast to all users in room (including sender for confirmation)
+            io.to(roomId).emit('motion-synced', { motion });
         }
     });
 
@@ -104,7 +105,8 @@ io.on('connection', (socket) => {
         if (room) {
             room.tossResult = tossResult;
             rooms.set(roomId, room);
-            socket.to(roomId).emit('toss-synced', { tossResult });
+            // Broadcast to all users in room (including sender for confirmation)
+            io.to(roomId).emit('toss-synced', { tossResult });
         }
     });
 
@@ -114,7 +116,8 @@ io.on('connection', (socket) => {
         if (room) {
             room.preparationStartTime = startTime;
             rooms.set(roomId, room);
-            socket.to(roomId).emit('preparation-start-synced', { startTime });
+            // Broadcast to all users in room (including sender for confirmation)
+            io.to(roomId).emit('preparation-start-synced', { startTime });
         }
     });
 
