@@ -2747,11 +2747,13 @@ Provide constructive feedback in the feedback section.`;
                     tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
                 }
                 if (tossResult) {
-                    appState.side = tossResult;
-                    const sideText = tossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
-                    const sideColor = tossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
-                    const sideEmoji = tossResult === 'PRO' ? '✅' : '❌';
-                    tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${tossResult}`;
+                    // Host gets the assigned side, guest gets the opposite
+                    const userSide = appState.isHost ? tossResult : (tossResult === 'PRO' ? 'CON' : 'PRO');
+                    appState.side = userSide;
+                    const sideText = userSide === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                    const sideColor = userSide === 'PRO' ? 'text-secondary' : 'text-red-400';
+                    const sideEmoji = userSide === 'PRO' ? '✅' : '❌';
+                    tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${userSide}`;
                     tossSideText.textContent = `${sideEmoji} ${sideText}`;
                     tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
                     tossResult.classList.remove('hidden');
@@ -2761,10 +2763,10 @@ Provide constructive feedback in the feedback section.`;
                     prepStatus.textContent = 'Ready';
                     prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
                     if (lobbyUserSide && lobbyOpponentSide) {
-                        lobbyUserSide.textContent = tossResult;
-                        lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
-                        lobbyOpponentSide.textContent = tossResult === 'PRO' ? 'CON' : 'PRO';
-                        lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                        lobbyUserSide.textContent = userSide;
+                        lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${userSide === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                        lobbyOpponentSide.textContent = userSide === 'PRO' ? 'CON' : 'PRO';
+                        lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${userSide === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
                     }
                 }
                 if (preparationStartTime) {
@@ -2855,12 +2857,16 @@ Provide constructive feedback in the feedback section.`;
             });
 
             socket.on('toss-synced', ({ tossResult: syncedTossResult }) => {
-                console.log('Toss synced:', syncedTossResult);
-                appState.side = syncedTossResult;
-                const sideText = syncedTossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
-                const sideColor = syncedTossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
-                const sideEmoji = syncedTossResult === 'PRO' ? '✅' : '❌';
-                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${syncedTossResult}`;
+                console.log('Toss synced:', syncedTossResult, 'isHost:', appState.isHost);
+                
+                // Host gets the assigned side, guest gets the opposite
+                const userSide = appState.isHost ? syncedTossResult : (syncedTossResult === 'PRO' ? 'CON' : 'PRO');
+                appState.side = userSide;
+                
+                const sideText = userSide === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                const sideColor = userSide === 'PRO' ? 'text-secondary' : 'text-red-400';
+                const sideEmoji = userSide === 'PRO' ? '✅' : '❌';
+                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${userSide}`;
                 tossSideText.textContent = `${sideEmoji} ${sideText}`;
                 tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
                 tossResult.classList.remove('hidden');
@@ -2870,10 +2876,10 @@ Provide constructive feedback in the feedback section.`;
                 prepStatus.textContent = 'Ready';
                 prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
                 if (lobbyUserSide && lobbyOpponentSide) {
-                    lobbyUserSide.textContent = syncedTossResult;
-                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${syncedTossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
-                    lobbyOpponentSide.textContent = syncedTossResult === 'PRO' ? 'CON' : 'PRO';
-                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${syncedTossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                    lobbyUserSide.textContent = userSide;
+                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${userSide === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                    lobbyOpponentSide.textContent = userSide === 'PRO' ? 'CON' : 'PRO';
+                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${userSide === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
                 }
             });
 
