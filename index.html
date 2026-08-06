@@ -353,14 +353,6 @@
                                     </p>
                                 </div>
                                 
-                                <!-- Enter Debate Button -->
-                                <button 
-                                    id="enterDebateBtn"
-                                    class="hidden w-full py-3 px-6 rounded-lg bg-secondary-dark text-white font-dm-sans font-semibold tracking-wide hover:bg-secondary transition-all duration-200 border border-secondary/30 mb-3"
-                                >
-                                    Ready to Enter Live Debate Arena
-                                </button>
-                                
                                 <!-- Hurry Up Countdown -->
                                 <div id="hurryUpCountdown" class="hidden mb-3 p-3 rounded-lg bg-surface-container-high border border-red-400/50">
                                     <p class="font-jetbrains-mono text-xs text-red-400 mb-1">Hurry up! Arena in:</p>
@@ -803,7 +795,6 @@
         const timerDisplay = document.getElementById('timerDisplay');
         const timerValue = document.getElementById('timerValue');
         const timerLabel = document.getElementById('timerLabel');
-        const enterDebateBtn = document.getElementById('enterDebateBtn');
         const hurryUpCountdown = document.getElementById('hurryUpCountdown');
         const hurryUpValue = document.getElementById('hurryUpValue');
         
@@ -1202,20 +1193,16 @@
                                 appState.preparationTimer = null;
                                 prepStatus.textContent = 'Time\'s Up!';
                                 prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                                showEnterDebateButton();
+
                                 startHurryUpCountdown();
                             }
                         }, 1000);
                         
-                        // Show enter button if enough time has passed
-                        if (elapsed >= 10) {
-                            showEnterDebateButton();
-                        }
+                        // No early entry - must wait full 5 minutes
                     } else {
                         // Timer already expired
                         prepStatus.textContent = 'Time\'s Up!';
                         prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                        showEnterDebateButton();
                         startHurryUpCountdown();
                     }
                 }
@@ -1224,7 +1211,7 @@
                 prepStatus.textContent = 'Locked';
                 prepStatus.className = 'font-jetbrains-mono text-xs text-outline';
                 timerDisplay.classList.add('hidden');
-                enterDebateBtn.classList.add('hidden');
+
             }
             
             // Update participant sides
@@ -1321,7 +1308,7 @@
                 prepStatus.textContent = 'Locked';
                 prepStatus.className = 'font-jetbrains-mono text-xs text-outline';
                 timerDisplay.classList.add('hidden');
-                enterDebateBtn.classList.add('hidden');
+
             }
         }
 
@@ -1766,18 +1753,11 @@
                     appState.preparationTimer = null;
                     prepStatus.textContent = 'Time\'s Up!';
                     prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                    showEnterDebateButton();
                     startHurryUpCountdown();
                 }
             }, 1000);
             
-            // Show enter button after 10 seconds (for early entry)
-            setTimeout(() => {
-                if (appState.preparationTimer) {
-                    showEnterDebateButton();
-                }
-            }, 10000);
-            
+            // No early entry - must wait full 5 minutes
             console.log('Preparation timer started');
         }
 
@@ -2657,22 +2637,6 @@ Provide constructive feedback in the feedback section.`;
             }
         }
 
-        function showEnterDebateButton() {
-            enterDebateBtn.classList.remove('hidden');
-            prepStatus.textContent = 'Ready to Enter';
-            prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-        }
-
-        function stopPreparationTimer() {
-            if (appState.preparationTimer) {
-                clearInterval(appState.preparationTimer);
-                appState.preparationTimer = null;
-            }
-        }
-
-        // Enter Debate Button Handler
-        enterDebateBtn.addEventListener('click', enterDebateArena);
-
         // Motion sync polling
         let motionSyncInterval = null;
         function startMotionSyncPolling() {
@@ -2789,7 +2753,7 @@ Provide constructive feedback in the feedback section.`;
                                 appState.preparationTimer = null;
                                 prepStatus.textContent = 'Time\'s Up!';
                                 prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                                showEnterDebateButton();
+
                                 startHurryUpCountdown();
                             }
                         }, 1000);
@@ -2804,7 +2768,7 @@ Provide constructive feedback in the feedback section.`;
                         updateTimerDisplay(0);
                         prepStatus.textContent = 'Time\'s Up!';
                         prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                        showEnterDebateButton();
+                        startHurryUpCountdown();
                     }
                 }
             }
