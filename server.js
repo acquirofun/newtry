@@ -55,6 +55,9 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         console.log(`User ${username} joined room ${roomId} as ${side}`);
 
+        // Send join success confirmation
+        socket.emit('join-success', { roomId });
+
         // Notify room about new user
         socket.to(roomId).emit('user-joined', { user });
 

@@ -908,6 +908,19 @@
                     return;
                 }
 
+                // Initialize socket if not already connected
+                if (!socket || !socket.connected) {
+                    initializeSocket();
+                    // Wait for connection
+                    await new Promise((resolve) => {
+                        if (socket.connected) {
+                            resolve();
+                        } else {
+                            socket.on('connect', resolve);
+                        }
+                    });
+                }
+
                 // Generate and set room code
                 const newRoomCode = generateRoomCode();
                 roomInput.value = newRoomCode;
@@ -925,11 +938,7 @@
 
                 console.log('Room created:', { name, roomCode: newRoomCode, isHost: true });
                 
-                // Initialize socket and join room
-                if (!socket) {
-                    initializeSocket();
-                }
-                
+                // Join room via socket
                 socket.emit('join-room', { 
                     roomId: newRoomCode, 
                     username: name, 
@@ -957,6 +966,19 @@
                     return;
                 }
 
+                // Initialize socket if not already connected
+                if (!socket || !socket.connected) {
+                    initializeSocket();
+                    // Wait for connection
+                    await new Promise((resolve) => {
+                        if (socket.connected) {
+                            resolve();
+                        } else {
+                            socket.on('connect', resolve);
+                        }
+                    });
+                }
+
                 // Save to appState and localStorage
                 appState.userName = validation.name;
                 appState.roomCode = validation.roomCode;
@@ -970,11 +992,7 @@
 
                 console.log('Joining room:', { name: validation.name, roomCode: validation.roomCode, isHost: false });
                 
-                // Initialize socket and join room
-                if (!socket) {
-                    initializeSocket();
-                }
-                
+                // Join room via socket
                 socket.emit('join-room', { 
                     roomId: validation.roomCode, 
                     username: validation.name, 
@@ -984,8 +1002,8 @@
                 // Update room code display
                 updateRoomCodeDisplay();
                 
-                // Transition to lobby
-                showLobby();
+                // Show waiting state until room is ready
+                showWaitingRoom();
                 
             } catch (error) {
                 console.error('Error joining room:', error);
@@ -2605,6 +2623,15 @@ Provide constructive feedback in the feedback section.`;
                 }
             });
 
+            socket.on('join-success', ({ roomId }) => {
+                console.log('Successfully joined room:', roomId);
+                if (appState.currentView === 'waiting' && !appState.isHost) {
+                    // Guest transitioning to lobby after successful join
+                    appState.debatePhase = 'lobby';
+                    showLobby();
+                }
+            });
+
             socket.on('room-ready', ({ users }) => {
                 console.log('Room ready with users:', users);
                 if (appState.currentView === 'waiting') {
@@ -2612,6 +2639,11 @@ Provide constructive feedback in the feedback section.`;
                     appState.debatePhase = 'lobby';
                     showLobby();
                 }
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+                showError('Failed to connect to server. Please refresh the page.');
             });
 
             socket.on('room-state', ({ users, motion, tossResult, preparationStartTime }) => {
