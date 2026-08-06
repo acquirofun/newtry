@@ -2652,10 +2652,11 @@ Provide constructive feedback in the feedback section.`;
             }
             
             socket = io(serverUrl, {
-                transports: ['websocket', 'polling'],
+                transports: ['polling'], // Use polling only for better compatibility
                 reconnection: true,
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000
+                reconnectionAttempts: 10,
+                reconnectionDelay: 2000,
+                timeout: 10000
             });
 
             socket.on('connect', () => {
@@ -2665,19 +2666,19 @@ Provide constructive feedback in the feedback section.`;
 
             socket.on('disconnect', (reason) => {
                 console.log('Disconnected from server, reason:', reason);
-                updateConnectionStatus(false);
+                // Don't show error for normal disconnects during reconnection
+                if (reason !== 'transport close' && reason !== 'ping timeout') {
+                    updateConnectionStatus(false);
+                }
             });
 
             socket.on('connect_error', (error) => {
                 console.error('Socket connection error:', error);
-                updateConnectionStatus(false);
-                showError('Connection error: ' + error.message);
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('Socket connection error:', error);
-                updateConnectionStatus(false);
-                showError('Connection error: ' + error.message);
+                // Only show error if not a reconnection attempt
+                if (!socket.connected) {
+                    updateConnectionStatus(false);
+                    showError('Connection error: ' + error.message);
+                }
             });
 
             socket.on('room-full', () => {
