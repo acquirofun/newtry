@@ -2671,6 +2671,10 @@ Provide constructive feedback in the feedback section.`;
                         const offer = await peerConnection.createOffer();
                         await peerConnection.setLocalDescription(offer);
                         socket.emit('offer', { roomId: appState.roomId, offer });
+                    } else {
+                        // Guest prepares local video for incoming connection
+                        console.log('Guest preparing for WebRTC connection');
+                        await startLocalVideo();
                     }
                 }
             });
@@ -2744,8 +2748,10 @@ Provide constructive feedback in the feedback section.`;
             socket.on('offer', async ({ offer, senderId }) => {
                 console.log('Received offer from:', senderId);
                 try {
-                    if (!peerConnection) {
+                    if (!localStream) {
                         await startLocalVideo();
+                    }
+                    if (!peerConnection) {
                         await createPeerConnection();
                     }
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
