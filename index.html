@@ -2842,10 +2842,10 @@ Provide constructive feedback in the feedback section.`;
                 }
             });
 
-            socket.on('motion-synced', ({ motion }) => {
-                console.log('Motion synced:', motion);
-                appState.motion = motion;
-                motionText.textContent = motion;
+            socket.on('motion-synced', ({ motion: syncedMotion }) => {
+                console.log('Motion synced:', syncedMotion);
+                appState.motion = syncedMotion;
+                motionText.textContent = syncedMotion;
                 motionDisplay.classList.remove('hidden');
                 motionStatus.textContent = 'Synced ✓';
                 motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
@@ -2854,13 +2854,13 @@ Provide constructive feedback in the feedback section.`;
                 tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
             });
 
-            socket.on('toss-synced', ({ tossResult }) => {
-                console.log('Toss synced:', tossResult);
-                appState.side = tossResult;
-                const sideText = tossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
-                const sideColor = tossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
-                const sideEmoji = tossResult === 'PRO' ? '✅' : '❌';
-                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${tossResult}`;
+            socket.on('toss-synced', ({ tossResult: syncedTossResult }) => {
+                console.log('Toss synced:', syncedTossResult);
+                appState.side = syncedTossResult;
+                const sideText = syncedTossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                const sideColor = syncedTossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
+                const sideEmoji = syncedTossResult === 'PRO' ? '✅' : '❌';
+                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${syncedTossResult}`;
                 tossSideText.textContent = `${sideEmoji} ${sideText}`;
                 tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
                 tossResult.classList.remove('hidden');
@@ -2870,10 +2870,10 @@ Provide constructive feedback in the feedback section.`;
                 prepStatus.textContent = 'Ready';
                 prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
                 if (lobbyUserSide && lobbyOpponentSide) {
-                    lobbyUserSide.textContent = tossResult;
-                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
-                    lobbyOpponentSide.textContent = tossResult === 'PRO' ? 'CON' : 'PRO';
-                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                    lobbyUserSide.textContent = syncedTossResult;
+                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${syncedTossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                    lobbyOpponentSide.textContent = syncedTossResult === 'PRO' ? 'CON' : 'PRO';
+                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${syncedTossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
                 }
             });
 
