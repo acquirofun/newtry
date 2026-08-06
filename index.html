@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DebateP2P - Real-Time P2P Video Debate Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -2643,8 +2643,15 @@ Provide constructive feedback in the feedback section.`;
 
         // Socket.io and WebRTC Functions
         function initializeSocket() {
-            const serverUrl = window.location.origin;
+            const serverUrl = window.location.origin || 'http://localhost:3000';
             console.log('Initializing socket to:', serverUrl);
+            
+            if (typeof io === 'undefined') {
+                console.error('Socket.IO library not loaded');
+                showError('Socket.IO library failed to load. Please refresh the page.');
+                return;
+            }
+            
             socket = io(serverUrl, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
