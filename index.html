@@ -749,6 +749,17 @@
         // Hurry up countdown
         let hurryUpCountdownInterval = null;
 
+        // WebRTC & Socket.io
+        let socket;
+        let localStream;
+        let peerConnection;
+        const iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
         // DOM Elements
         const landingView = document.getElementById('landingView');
         const waitingView = document.getElementById('waitingView');
@@ -888,7 +899,7 @@
         }
 
         // Create Room Handler
-        createRoomBtn.addEventListener('click', () => {
+        createRoomBtn.addEventListener('click', async () => {
             try {
                 const name = nameInput.value.trim();
                 
@@ -906,6 +917,7 @@
                 appState.roomCode = newRoomCode;
                 appState.isHost = true;
                 appState.debatePhase = 'waiting';
+                appState.roomId = newRoomCode;
 
                 localStorage.setItem('debateP2P_userName', name);
                 localStorage.setItem('debateP2P_roomCode', newRoomCode);
@@ -913,12 +925,22 @@
 
                 console.log('Room created:', { name, roomCode: newRoomCode, isHost: true });
                 
+                // Initialize socket and join room
+                if (!socket) {
+                    initializeSocket();
+                }
+                
+                socket.emit('join-room', { 
+                    roomId: newRoomCode, 
+                    username: name, 
+                    side: 'host' 
+                });
+                
                 // Update room code display
                 updateRoomCodeDisplay();
                 
                 // Transition to waiting room
                 showWaitingRoom();
-                simulateOpponentJoin();
                 
             } catch (error) {
                 console.error('Error creating room:', error);
@@ -927,7 +949,7 @@
         });
 
         // Join Room Handler
-        joinRoomBtn.addEventListener('click', () => {
+        joinRoomBtn.addEventListener('click', async () => {
             try {
                 const validation = validateInputs();
                 
@@ -940,13 +962,24 @@
                 appState.roomCode = validation.roomCode;
                 appState.isHost = false;
                 appState.debatePhase = 'lobby';
-                appState.opponentConnected = true;
+                appState.roomId = validation.roomCode;
 
                 localStorage.setItem('debateP2P_userName', validation.name);
                 localStorage.setItem('debateP2P_roomCode', validation.roomCode);
                 localStorage.setItem('debateP2P_isHost', 'false');
 
                 console.log('Joining room:', { name: validation.name, roomCode: validation.roomCode, isHost: false });
+                
+                // Initialize socket and join room
+                if (!socket) {
+                    initializeSocket();
+                }
+                
+                socket.emit('join-room', { 
+                    roomId: validation.roomCode, 
+                    username: validation.name, 
+                    side: 'guest' 
+                });
                 
                 // Update room code display
                 updateRoomCodeDisplay();
@@ -1079,18 +1112,6 @@
             showLobbyView();
             
             updateConnectionStatus('connected', 'Both Participants Connected 🟢');
-            
-            // Start motion sync polling
-            startMotionSyncPolling();
-            
-            // Start toss sync polling
-            startTossSyncPolling();
-            
-            // Check for synced motion
-            checkForSyncedMotion();
-            
-            // Check for synced toss
-            checkForSyncedToss();
             
             // Start auto-generate countdown if no motion yet
             if (!appState.motion && appState.isHost) {
@@ -1312,24 +1333,6 @@
             }
         }
 
-        // Simulate peer connection (for demo purposes)
-        function simulateOpponentJoin() {
-            if (waitingInterval) clearInterval(waitingInterval);
-            
-            waitingInterval = setInterval(() => {
-                if (appState.debatePhase === 'waiting' && !appState.opponentConnected) {
-                    // Simulate opponent joining after 3-8 seconds
-                    if (Math.random() > 0.7) {
-                        appState.opponentConnected = true;
-                        appState.debatePhase = 'lobby';
-                        clearInterval(waitingInterval);
-                        showLobby();
-                        console.log('Opponent joined!');
-                    }
-                }
-            }, 1000);
-        }
-
         // Load saved data on page load
         function loadSavedData() {
             const savedName = localStorage.getItem('debateP2P_userName');
@@ -1387,50 +1390,10 @@
             }
         }
 
-        // Simulate motion synchronization between peers
-        function simulateMotionSync(motion) {
-            // In a real implementation, this would use WebRTC data channels
-            // For now, we simulate sync by updating localStorage
-            localStorage.setItem(`debateP2P_motion_${appState.roomCode}`, motion);
-            
-            // Simulate peer receiving the motion
-            setTimeout(() => {
-                console.log('Motion synced to peer:', motion);
-            }, 500);
-        }
-
-        // Check for synced motion (for peer who didn't generate)
-        function checkForSyncedMotion() {
-            const syncedMotion = localStorage.getItem(`debateP2P_motion_${appState.roomCode}`);
-            if (syncedMotion && !appState.motion) {
-                appState.motion = syncedMotion;
-                motionText.textContent = syncedMotion;
-                motionDisplay.classList.remove('hidden');
-                motionStatus.textContent = 'Received from host ✓';
-                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                
-                // Stop auto-generate countdown
-                stopMotionCountdown();
-                
-                // Lock motion generation - can't be changed
-                generateMotionBtn.disabled = true;
-                generateMotionBtn.textContent = 'Motion Locked';
-                generateMotionBtn.classList.add('opacity-50');
-                
-                // Unlock toss card
-                tossCard.classList.remove('opacity-50');
-                tossStatus.textContent = 'Ready';
-                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
-                
-                // Guest waits for host's toss
-                if (!appState.isHost) {
-                    tossStatus.textContent = 'Waiting for Host';
-                } else {
-                    // Host starts auto-toss countdown
-                    startTossCountdown();
-                }
-                
-                console.log('Motion received from sync and locked:', syncedMotion);
+        // Sync motion via Socket.io
+        function syncMotion(motion) {
+            if (socket && appState.roomId) {
+                socket.emit('sync-motion', { roomId: appState.roomId, motion });
             }
         }
 
@@ -1565,8 +1528,8 @@
                     tossStatus.textContent = 'Ready';
                     tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
 
-                    // Simulate sync with peer
-                    simulateMotionSync(randomMotion);
+                    // Sync motion with peer
+                    syncMotion(randomMotion);
 
                     // Start auto-toss countdown (only for host)
                     if (appState.isHost) {
@@ -1653,7 +1616,7 @@
                     lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
 
                     // Sync with peer
-                    simulateTossSync(hostSide);
+                    syncToss(hostSide);
 
                     // Start preparation timer automatically
                     startPreparationTimer();
@@ -1671,60 +1634,17 @@
             }
         }
 
-        // Simulate toss synchronization
-        function simulateTossSync(hostSide) {
-            localStorage.setItem(`debateP2P_toss_${appState.roomCode}`, hostSide);
-            
-            // Also sync timer start
-            if (!localStorage.getItem('debateP2P_timerStart')) {
-                localStorage.setItem('debateP2P_timerStart', Date.now().toString());
+        // Sync toss via Socket.io
+        function syncToss(tossResult) {
+            if (socket && appState.roomId) {
+                socket.emit('sync-toss', { roomId: appState.roomId, tossResult });
             }
-            
-            setTimeout(() => {
-                console.log('Toss result synced to peer:', hostSide);
-            }, 500);
         }
 
-        // Check for synced toss result
-        function checkForSyncedToss() {
-            const syncedToss = localStorage.getItem(`debateP2P_toss_${appState.roomCode}`);
-            if (syncedToss && !appState.side) {
-                // Stop auto-toss countdown if running
-                stopTossCountdown();
-                
-                // Calculate guest's side based on host's
-                appState.side = syncedToss === 'PRO' ? 'CON' : 'PRO';
-                
-                // Update UI
-                coinAnimation.classList.add('hidden');
-                tossResult.classList.remove('hidden');
-                
-                const sideText = appState.side === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
-                const sideColor = appState.side === 'PRO' ? 'text-secondary' : 'text-red-400';
-                const sideEmoji = appState.side === 'PRO' ? '✅' : '❌';
-                
-                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${appState.side}`;
-                tossSideText.textContent = `${sideEmoji} ${sideText}`;
-                tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
-                
-                tossStatus.textContent = 'Received from Host ✓';
-                tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-
-                // Unlock preparation card
-                prepCard.classList.remove('opacity-50');
-                prepStatus.textContent = 'Ready';
-                prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
-
-                // Update participant info
-                lobbyUserSide.textContent = appState.side;
-                lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${appState.side === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
-                lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
-                lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
-
-                // Start preparation timer automatically
-                startPreparationTimer();
-
-                console.log('Toss result received from sync:', { hostSide: syncedToss, userSide: appState.side });
+        // Sync preparation timer start via Socket.io
+        function syncPreparationStart(startTime) {
+            if (socket && appState.roomId) {
+                socket.emit('sync-preparation-start', { roomId: appState.roomId, startTime });
             }
         }
 
@@ -1732,8 +1652,9 @@
         function startPreparationTimer() {
             let timeLeft = 299; // 4 minutes 59 seconds in seconds
             
-            // Save timer start time
-            localStorage.setItem('debateP2P_timerStart', Date.now().toString());
+            // Sync timer start with peer
+            const startTime = Date.now();
+            syncPreparationStart(startTime);
             
             // Show timer display
             timerDisplay.classList.remove('hidden');
@@ -2280,7 +2201,7 @@ Provide constructive feedback in the feedback section.`;
         });
 
         // Initialize Arena
-        function initializeArena() {
+        async function initializeArena() {
             // Update motion display
             if (appState.motion) {
                 arenaMotion.textContent = appState.motion;
@@ -2300,52 +2221,14 @@ Provide constructive feedback in the feedback section.`;
                 remoteUserSide.className = 'font-jetbrains-mono text-sm text-outline';
             }
             
-            // Start camera automatically
-            startLocalVideo();
+            // Start camera and WebRTC connection
+            await startLocalVideo();
+            await createPeerConnection();
             
             // Start turn management instead of just speech recognition
             startTurnManagement();
             
             console.log('Arena initialized');
-        }
-
-        // WebRTC Functions
-        async function startLocalVideo() {
-            try {
-                // Get user media
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: true
-                });
-                
-                // Attach to local video element
-                localVideo.srcObject = localStream;
-                localVideoPlaceholder.classList.add('hidden');
-                
-                // Update status indicators
-                localVideoStatus.textContent = '🟢';
-                localAudioStatus.textContent = '🟢';
-                
-                console.log('Local video started');
-                
-            } catch (error) {
-                console.error('Error accessing media devices:', error);
-                showError('Could not access camera/microphone. Please check permissions.');
-            }
-        }
-
-        function stopLocalVideo() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            localVideo.srcObject = null;
-            localVideoPlaceholder.classList.remove('hidden');
-            localVideoStatus.textContent = '🔴';
-            localAudioStatus.textContent = '🔇';
         }
 
         // Toggle Functions
@@ -2637,44 +2520,6 @@ Provide constructive feedback in the feedback section.`;
             }
         }
 
-        // Motion sync polling
-        let motionSyncInterval = null;
-        function startMotionSyncPolling() {
-            if (motionSyncInterval) clearInterval(motionSyncInterval);
-            
-            motionSyncInterval = setInterval(() => {
-                if (appState.currentView === 'lobby' && !appState.motion) {
-                    checkForSyncedMotion();
-                }
-            }, 1000);
-        }
-
-        function stopMotionSyncPolling() {
-            if (motionSyncInterval) {
-                clearInterval(motionSyncInterval);
-                motionSyncInterval = null;
-            }
-        }
-
-        // Toss sync polling
-        let tossSyncInterval = null;
-        function startTossSyncPolling() {
-            if (tossSyncInterval) clearInterval(tossSyncInterval);
-            
-            tossSyncInterval = setInterval(() => {
-                if (appState.currentView === 'lobby' && appState.motion && !appState.side) {
-                    checkForSyncedToss();
-                }
-            }, 1000);
-        }
-
-        function stopTossSyncPolling() {
-            if (tossSyncInterval) {
-                clearInterval(tossSyncInterval);
-                tossSyncInterval = null;
-            }
-        }
-
         // Initialize
         loadSavedData();
         loadApiKey();
@@ -2729,50 +2574,263 @@ Provide constructive feedback in the feedback section.`;
                     lobbyOpponentSide.textContent = appState.side === 'PRO' ? 'CON' : 'PRO';
                     lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 ${appState.side === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
                 }
-                
-                // Check if timer was running and restore it
-                const savedTimerStart = localStorage.getItem('debateP2P_timerStart');
-                if (savedTimerStart && appState.side) {
-                    const elapsed = Math.floor((Date.now() - parseInt(savedTimerStart)) / 1000);
+            }
+        });
+
+        // Socket.io and WebRTC Functions
+        function initializeSocket() {
+            const serverUrl = window.location.origin;
+            socket = io(serverUrl);
+
+            socket.on('connect', () => {
+                console.log('Connected to server:', socket.id);
+                updateConnectionStatus(true);
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                updateConnectionStatus(false);
+            });
+
+            socket.on('room-full', () => {
+                showError('Room is full. Please try another room.');
+            });
+
+            socket.on('user-joined', ({ user }) => {
+                console.log('User joined:', user);
+                if (appState.currentView === 'waiting') {
+                    appState.opponentConnected = true;
+                    appState.debatePhase = 'lobby';
+                    showLobby();
+                }
+            });
+
+            socket.on('room-ready', ({ users }) => {
+                console.log('Room ready with users:', users);
+                if (appState.currentView === 'waiting') {
+                    appState.opponentConnected = true;
+                    appState.debatePhase = 'lobby';
+                    showLobby();
+                }
+            });
+
+            socket.on('room-state', ({ users, motion, tossResult, preparationStartTime }) => {
+                console.log('Room state received:', { users, motion, tossResult, preparationStartTime });
+                if (motion) {
+                    appState.motion = motion;
+                    motionText.textContent = motion;
+                    motionDisplay.classList.remove('hidden');
+                    motionStatus.textContent = 'Loaded ✓';
+                    motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                    tossCard.classList.remove('opacity-50');
+                    tossStatus.textContent = 'Ready';
+                    tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                }
+                if (tossResult) {
+                    appState.side = tossResult;
+                    const sideText = tossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                    const sideColor = tossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
+                    const sideEmoji = tossResult === 'PRO' ? '✅' : '❌';
+                    tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${tossResult}`;
+                    tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                    tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                    tossResult.classList.remove('hidden');
+                    tossStatus.textContent = 'Loaded ✓';
+                    tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                    prepCard.classList.remove('opacity-50');
+                    prepStatus.textContent = 'Ready';
+                    prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                    if (lobbyUserSide && lobbyOpponentSide) {
+                        lobbyUserSide.textContent = tossResult;
+                        lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                        lobbyOpponentSide.textContent = tossResult === 'PRO' ? 'CON' : 'PRO';
+                        lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                    }
+                }
+                if (preparationStartTime) {
+                    const elapsed = Math.floor((Date.now() - preparationStartTime) / 1000);
                     const remaining = Math.max(0, 299 - elapsed);
-                    
                     if (remaining > 0) {
                         timerDisplay.classList.remove('hidden');
                         updateTimerDisplay(remaining);
                         prepStatus.textContent = 'Timer Running';
                         prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-                        
-                        // Resume countdown
                         let timeLeft = remaining;
                         appState.preparationTimer = setInterval(() => {
                             timeLeft--;
                             updateTimerDisplay(timeLeft);
-                            
                             if (timeLeft <= 0) {
                                 clearInterval(appState.preparationTimer);
                                 appState.preparationTimer = null;
                                 prepStatus.textContent = 'Time\'s Up!';
                                 prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
-
                                 startHurryUpCountdown();
                             }
                         }, 1000);
-                        
-                        // Show enter button if enough time has passed
-                        if (elapsed >= 10) {
-                            showEnterDebateButton();
-                        }
                     } else {
-                        // Timer already expired
-                        timerDisplay.classList.remove('hidden');
-                        updateTimerDisplay(0);
                         prepStatus.textContent = 'Time\'s Up!';
                         prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
                         startHurryUpCountdown();
                     }
                 }
+            });
+
+            socket.on('offer', async ({ offer, senderId }) => {
+                console.log('Received offer from:', senderId);
+                if (!peerConnection) {
+                    await createPeerConnection();
+                }
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('answer', { roomId: appState.roomId, answer });
+            });
+
+            socket.on('answer', async ({ answer, senderId }) => {
+                console.log('Received answer from:', senderId);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            });
+
+            socket.on('ice-candidate', async ({ candidate, senderId }) => {
+                console.log('Received ICE candidate from:', senderId);
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.error('Error adding received ice candidate', e);
+                }
+            });
+
+            socket.on('user-left', ({ userId }) => {
+                console.log('User left:', userId);
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+            });
+
+            socket.on('motion-synced', ({ motion }) => {
+                console.log('Motion synced:', motion);
+                appState.motion = motion;
+                motionText.textContent = motion;
+                motionDisplay.classList.remove('hidden');
+                motionStatus.textContent = 'Synced ✓';
+                motionStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                tossCard.classList.remove('opacity-50');
+                tossStatus.textContent = 'Ready';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-primary';
+            });
+
+            socket.on('toss-synced', ({ tossResult }) => {
+                console.log('Toss synced:', tossResult);
+                appState.side = tossResult;
+                const sideText = tossResult === 'PRO' ? 'PRO (Affirmative)' : 'CON (Negative)';
+                const sideColor = tossResult === 'PRO' ? 'text-secondary' : 'text-red-400';
+                const sideEmoji = tossResult === 'PRO' ? '✅' : '❌';
+                tossResultText.textContent = `🪙 Coin Toss Result: YOU ARE ASSIGNED AS ${tossResult}`;
+                tossSideText.textContent = `${sideEmoji} ${sideText}`;
+                tossSideText.className = `font-jetbrains-mono text-xs ${sideColor} mt-1 font-bold`;
+                tossResult.classList.remove('hidden');
+                tossStatus.textContent = 'Synced ✓';
+                tossStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                prepCard.classList.remove('opacity-50');
+                prepStatus.textContent = 'Ready';
+                prepStatus.className = 'font-jetbrains-mono text-xs text-primary';
+                if (lobbyUserSide && lobbyOpponentSide) {
+                    lobbyUserSide.textContent = tossResult;
+                    lobbyUserSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-secondary' : 'text-red-400'}`;
+                    lobbyOpponentSide.textContent = tossResult === 'PRO' ? 'CON' : 'PRO';
+                    lobbyOpponentSide.className = `font-jetbrains-mono text-sm mt-1 font-bold ${tossResult === 'PRO' ? 'text-red-400' : 'text-secondary'}`;
+                }
+            });
+
+            socket.on('preparation-start-synced', ({ startTime }) => {
+                console.log('Preparation start synced:', startTime);
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const remaining = Math.max(0, 299 - elapsed);
+                if (remaining > 0) {
+                    timerDisplay.classList.remove('hidden');
+                    updateTimerDisplay(remaining);
+                    prepStatus.textContent = 'Timer Running';
+                    prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                    let timeLeft = remaining;
+                    appState.preparationTimer = setInterval(() => {
+                        timeLeft--;
+                        updateTimerDisplay(timeLeft);
+                        if (timeLeft <= 0) {
+                            clearInterval(appState.preparationTimer);
+                            appState.preparationTimer = null;
+                            prepStatus.textContent = 'Time\'s Up!';
+                            prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                            startHurryUpCountdown();
+                        }
+                    }, 1000);
+                } else {
+                    prepStatus.textContent = 'Time\'s Up!';
+                    prepStatus.className = 'font-jetbrains-mono text-xs text-secondary';
+                    startHurryUpCountdown();
+                }
+            });
+        }
+
+        async function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(iceServers);
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('ice-candidate', { roomId: appState.roomId, candidate: event.candidate });
+                }
+            };
+
+            peerConnection.ontrack = (event) => {
+                console.log('Received remote track');
+                const remoteVideo = document.getElementById('remoteVideo');
+                if (remoteVideo) {
+                    remoteVideo.srcObject = event.streams[0];
+                }
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+            };
+
+            // Add local stream tracks
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
             }
-        });
+        }
+
+        async function startLocalVideo() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const localVideo = document.getElementById('localVideo');
+                if (localVideo) {
+                    localVideo.srcObject = localStream;
+                }
+                return localStream;
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                throw error;
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            if (connectionStatus) {
+                if (connected) {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-secondary';
+                    statusText.textContent = 'Connected';
+                    statusText.className = 'font-jetbrains-mono text-xs text-secondary';
+                } else {
+                    statusDot.className = 'w-2 h-2 rounded-full bg-red-400';
+                    statusText.textContent = 'Disconnected';
+                    statusText.className = 'font-jetbrains-mono text-xs text-red-400';
+                }
+            }
+        }
 
         console.log('DebateP2P Application Initialized');
     </script>
