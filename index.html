@@ -1712,6 +1712,13 @@
             }
         }
 
+        function stopPreparationTimer() {
+            if (appState.preparationTimer) {
+                clearInterval(appState.preparationTimer);
+                appState.preparationTimer = null;
+            }
+        }
+
         // Preparation Timer Logic
         function startPreparationTimer() {
             let timeLeft = 299; // 4 minutes 59 seconds in seconds
