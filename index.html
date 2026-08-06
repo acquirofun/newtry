@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DebateP2P - Real-Time P2P Video Debate Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -795,6 +796,7 @@
         const lobbyRoomCode = document.getElementById('lobbyRoomCode');
         const lobbyUserSide = document.getElementById('lobbyUserSide');
         const lobbyOpponentSide = document.getElementById('lobbyOpponentSide');
+        const lobbyOpponentName = document.getElementById('lobbyOpponentName');
         const tossIcon = document.getElementById('tossIcon');
         const tossCountdown = document.getElementById('tossCountdown');
         const tossCountdownValue = document.getElementById('tossCountdownValue');
